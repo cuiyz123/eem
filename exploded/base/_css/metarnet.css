@@ -1,0 +1,400 @@
+@charset "UTF-8";
+/*---basePage.jsp---*/
+body , table{
+    font-size:13px!important;
+}
+a , a:hover{
+    color: #d7191f!important;
+    cursor: pointer;
+}
+.overflow-hidden{
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.btn{border-radius:4px;}
+
+.big-title-metar{
+    margin-top: -5px;
+    font-size: 20px;
+    line-height: 50px;
+    font-weight: bold;
+    text-align:center;
+    color: #333;
+}
+
+.dt-grid-pager .active a{
+    background-color:#F76160!important;
+    border-color:#F76160!important;
+}
+.dt-grid-pager .disabled a{
+    color:#777!important;
+    border-color:#ddd!important;
+}
+.text-center{
+    text-align:left;
+    height:30px;
+    padding-left: 5px!important;
+    padding-top: 0!important;
+    padding-bottom: 0!important;
+    word-break:break-all;/*支持IE，chrome，FF不支持*/
+    word-wrap:break-word;/*支持IE，chrome，FF*/
+}
+.text-primary , .dt-grid-pager{
+    color: #d7191f!important;
+}
+.dt-grid{
+    table-layout: fixed;
+}
+
+.__require{
+    color: #ff0000;
+    font-weight: bold;
+}
+.__notnull{
+    border:1px solid #ff0000!important;
+}
+#__progress{
+    position: fixed;
+    bottom: 0px;
+    z-index: 900;
+    width:100%;
+    margin: 0;
+    display: none;
+}
+.form_area_title{
+    color:#D9534F;
+    padding-left: 5px;
+    font-size: 14px;
+    font-weight:bold;
+}
+.progress-bar{
+    background-color:#F76160 ;
+}
+.modal-body{
+    overflow: auto;
+}
+
+.glyphicon{
+    cursor: pointer;
+}
+.glyphicon:hover{
+    color: #F76160;
+}
+/*---frame.jsp样式---*/
+#__link_bar{
+    text-align:right;
+    background-color: #f5f5f5;
+    padding: 5px;
+    position:fixed;
+    top:0px;
+    width:100%;
+    z-index: 1000;
+}
+#__link_bar a{
+    padding: 4px;
+}
+#__areaName_list a , .__component_title a{
+    display: block;
+}
+#__areaName_list>div , .__component_title{
+    background-color: #f5f5f5;
+    padding: 5px 20px;
+    border-top:1px solid #bbb;
+}
+#__page_big_title{
+    margin-top: 20px;
+}
+.__link_dialog_container{
+    /*z-index: 1000;*/
+    /*position: fixed;*/
+    top:50%;
+    left:50%;
+    background-color: #fff;
+    border: 1px solid #bbb;
+}
+.modal-header{
+    font-weight: bold;
+    background-color:#f5f5f5;
+    padding-top:5px!important;
+    padding-bottom:5px!important;
+}
+
+/*---弹窗组件样式---*/
+.__dialog_panel_btns{
+    width:100%;
+    margin-top:10px;
+    /*margin-bottom:10px;*/
+    text-align:center;
+}
+/*---派发树tab页样式---*/
+.nav > li > a{
+    padding: 5px 15px;
+}
+/*---签收组件样式---*/
+.__dialog_panel_table , .__dialog_panel_table th , .__dialog_panel_table td{
+    border:1px solid #bbb;
+}
+.__dialog_panel_table{
+    line-height: 30px;
+    width:100%;
+    border:1px solid #bbb;
+    border-collapse: collapse;
+}
+.__dialog_panel_table th{
+    text-align: center;
+}
+.__dialog_panel_table textarea{
+    height:100px!important;
+    border:1px solid #fff;
+    resize: none;
+}
+.__dialog_panel_table__td{
+    padding-left: 12px;
+}
+/*---表单样式---*/
+.radio, .checkbox{
+    margin: 0;
+}
+.form-control{
+    padding: 5px;
+}
+
+.table-form-2 th , .table-form-2 td{
+    width: 50%;
+}
+.table-form-4 th{
+    width: 20%;
+}
+.table-form-4 td{
+    width: 30%;
+}
+.table-form-6 th , .table-form-6 td{
+    width: 16.66%;
+}
+
+.table-fixed{
+    table-layout: fixed;
+}
+.table_show{
+    padding-left: 12px!important;
+}
+.table td , .table th{
+    font-weight: normal;
+    cursor: default!important;
+    height:30px;
+    border: 1px solid #bbb;
+    padding-top: 0px!important;
+    padding-bottom: 0px!important;
+}
+.table .show{
+    padding-left: 12px!important;
+}
+.table td input , .table td textarea , .table td select{
+    border: 1px solid #fff;
+}
+.table th , .table th:hover{
+    font-weight:bold;
+}
+.table td:hover{
+    background-color: #fff!important;
+}
+
+.table > thead > tr > td, .table > tbody > tr > td, .table > tfoot > tr > td{
+    padding-left: 0;
+    padding-right: 0;
+    line-height:20px;
+}
+.table td textarea{
+    resize: none;
+}
+
+.table td span , .table > thead > tr > th, .table > tbody > tr > th, .table > tfoot > tr > th{
+    padding-left: 5px;
+}
+.metar_not_null{
+    border: 1px solid #ff0000!important;
+    /*background-color: #FFCACA;*/
+}
+
+.table-no-bottom-margin{
+    margin-bottom: 0px;
+    margin-top: 5px;
+}
+.table-padding{
+    padding:0 5px;
+}
+
+/*.table-horizon th{*/
+    /*background-color:#F9F9F9;*/
+/*}*/
+.table-horizon th { border-top: 0!important;}
+.table-horizon th , .table-horizon td{
+    border-right: 0;
+    border-left: 0;
+}
+.dt-grid .dt-grid-row .dt-grid-cell {
+    padding-left: 5px;
+}
+
+.glyphicon{
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+}
+
+.form-control[disabled], .form-control[readonly], fieldset[disabled] .form-control{
+    border:1px solid #fff;
+    cursor: default;
+    background-color: #fff;
+}
+
+
+
+
+/*---附件列表样式---*/
+.__metar_attachment_list , .__metar_attachment_list_nocounter{
+    padding-left: 5px;
+    counter-reset:sectioncounter;
+    margin-bottom: 0px;
+}
+.__metar_attachment_list li , .__metar_attachment_list_nocounter{
+    display: inline;
+    margin-right: 10px;
+}
+.__metar_attachment_list li:before {
+    content:counter(sectioncounter) "、";
+    counter-increment:sectioncounter;
+}
+
+/*---人员树查询结果---*/
+.__metar_query_person_result{
+    padding-left: 0;
+    list-style:none;
+}
+
+/*
+Uploadify
+Copyright (c) 2012 Reactive Apps, Ronnie Garcia
+Released under the MIT License <http://www.opensource.org/licenses/mit-license.php>
+*/
+
+.uploadify {
+    position: relative;
+    /*margin-bottom: 1em;*/
+}
+.uploadify-button {
+    background-color: #d9534f;
+    /*background-image: linear-gradient(bottom, #505050 0%, #707070 100%);*/
+    /*background-image: -o-linear-gradient(bottom, #505050 0%, #707070 100%);*/
+    /*background-image: -moz-linear-gradient(bottom, #505050 0%, #707070 100%);*/
+    /*background-image: -webkit-linear-gradient(bottom, #505050 0%, #707070 100%);*/
+    /*background-image: -ms-linear-gradient(bottom, #505050 0%, #707070 100%);*/
+    /*background-image: -webkit-gradient(*/
+        /*linear,*/
+        /*left bottom,*/
+        /*left top,*/
+        /*color-stop(0, #505050),*/
+        /*color-stop(1, #707070)*/
+    /*);*/
+    background-position: center top;
+    background-repeat: no-repeat;
+    /*-webkit-border-radius: 30px;*/
+    /*-moz-border-radius: 30px;*/
+    /*border-radius: 30px;*/
+    border: 0px solid #808080;
+    color: #FFF;
+    /*font: bold 12px Arial, Helvetica, sans-serif;*/
+    text-align: center;
+    /*text-shadow: 0 -1px 0 rgba(0,0,0,0.25);*/
+    width: 100%;
+}
+.uploadify:hover .uploadify-button {
+    padding: 0px;
+    background-color: #c9302c;
+    /*background-image: linear-gradient(top, #606060 0%, #808080 100%);*/
+    /*background-image: -o-linear-gradient(top, #606060 0%, #808080 100%);*/
+    /*background-image: -moz-linear-gradient(top, #606060 0%, #808080 100%);*/
+    /*background-image: -webkit-linear-gradient(top, #606060 0%, #808080 100%);*/
+    /*background-image: -ms-linear-gradient(top, #606060 0%, #808080 100%);*/
+    /*background-image: -webkit-gradient(*/
+        /*linear,*/
+        /*left bottom,*/
+        /*left top,*/
+        /*color-stop(0, #606060),*/
+        /*color-stop(1, #808080)*/
+    /*);*/
+    background-position: center bottom;
+}
+.uploadify-button.disabled {
+    background-color: #D0D0D0;
+    color: #808080;
+}
+.uploadify-queue {
+    position: absolute;
+    z-index: 1000;
+    margin-bottom: 1em;
+}
+.uploadify-queue-item {
+    background-color: #F5F5F5;
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;
+    border-radius: 3px;
+    font: 11px Verdana, Geneva, sans-serif;
+    margin-top: 5px;
+    max-width: 350px;
+    padding: 10px;
+}
+.uploadify-error {
+    background-color: #FDE5DD !important;
+}
+.uploadify-queue-item .cancel a {
+    background: url('../_resources/uploadify-cancel.png') 0 0 no-repeat;
+    float: right;
+    height:	16px;
+    text-indent: -9999px;
+    width: 16px;
+}
+.uploadify-queue-item.completed {
+    background-color: #E5E5E5;
+}
+.uploadify-progress {
+    background-color: #E5E5E5;
+    margin-top: 10px;
+    width: 100%;
+}
+.uploadify-progress-bar {
+    background-color: #F76160;
+    height: 3px;
+    width: 1px;
+}
+
+/*---修改ztree样式---*/
+.ztree a , .ztree a:hover{
+    color: #333!important;
+}
+.ztree{
+    padding-top: 0!important;
+}
+
+/*---等待提示---*/
+.__metar_progress_box{
+    width: 32px;
+    height: 32px;
+    position: fixed;
+    z-index: 9999;
+    margin-top: -16px;
+    margin-left: -16px;
+    top: 50%;
+    left: 50%;
+}
+/*---span根据宽度自动换行----*/
+.spanWordWrap{
+    word-break:normal;
+    width:auto;
+    display:block;
+    white-space:pre-wrap;
+    word-wrap : break-word ;
+    overflow: hidden ;
+}

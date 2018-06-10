@@ -1,0 +1,106 @@
+<%@ page import="java.util.Calendar" %>
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ include file="/base/basePage.jsp" %>
+<html>
+<head>
+    <title>上报数据展示</title>
+    <script type="text/javascript" src="<%=path%>/base/js/eemSignFormSuccessLink.js"></script>
+    <script type="text/javascript" src="<%=path%>/base/js/eemSignFormFailedLink.js"></script>
+</head>
+<body>
+<div id="__link_bar"></div>
+<%--<span class="btn btn-danger" onclick="javascript:window.history.go(-1)">返回</span>--%>
+${tempHTML}
+<div id="__reject_modal_window" class="__link_dialog_container modal">
+    <div class="modal-header">驳回
+        <div class="close" onclick="closeModalWindow('__reject_modal_window')">×</div>
+    </div>
+    <div class="modal-body" id="__reject_modal_body"></div>
+</div>
+<div id="__pass_modal_window" class="__link_dialog_container modal">
+    <div class="modal-header">通过
+        <div class="close" onclick="closeModalWindow('__pass_modal_window')">×</div>
+    </div>
+    <div class="modal-body" id="__pass_modal_body"></div>
+</div>
+</body>
+<script>
+    __$__processingObjectId='${objectId}';
+    __$__processingObjectTable='t_eem_excel_page';
+    $(function () {
+        $("table").attr("class", "table");
+        $('input:text').attr("readonly", "readonly");
+
+    })
+    var __back_action = $('<a>返回</a>');
+    var __reject_action = $('<a>通过</a>');
+    var __pass_action = $('<a>驳回</a>');
+    __back_action.click(function () {
+        <%
+            String type = request.getAttribute("type").toString();
+            String provinceName = request.getAttribute("provinceName").toString();
+            String provinceCode = request.getAttribute("provinceCode").toString();
+            String yearStr = request.getAttribute("yearStr").toString();
+            request.setAttribute("yearStr", String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));
+        %>
+        debugger;
+        if("todo"=="<%=type%>"){
+            <%--location.href = "<%=path%>/eemCommonController.do?method=todo";--%>
+            window.history.back();
+        }else if("already"=="<%=type%>"){
+            <%--location.href = "<%=path%>/eemCommonController.do?method=already";--%>
+            window.history.back();
+        }else if("dataQuery"=="<%=type%>"){
+            <%--location.href = "<%=path%>/eemCommonController.do?method=initQueryData";--%>
+            window.history.back();
+        }else if("dataQueryAll"=="<%=type%>"){
+            <%--location.href = "<%=path%>/eemCommonController.do?method=initQueryDataAll";--%>
+            window.history.back();
+        }else{
+            <%--location.href = "<%=path%>/base/page/<%=type%>.jsp?provinceCode=<%=provinceCode%>&provinceName=<%=provinceName%>&yearStr=<%=yearStr%>";--%>
+            window.history.back();
+        }
+
+    });
+    __reject_action.click(__reject_feedback);
+    __pass_action.click(__pass_feedback);
+    function __reject_feedback() {
+        $('#__pass_modal_window').modal('show');
+        signFormSuccessLink('__pass_modal_body', 'N');
+    }
+    function __pass_feedback() {
+        $('#__reject_modal_window').modal('show');
+        signFormFailedLink('__reject_modal_body', 'N');
+    }
+    function closeModalWindow(modalWindow) {
+        $('#' + modalWindow).modal('hide');
+    }
+    <%
+    if(type.equals("todo")){
+    %>
+    $('#__link_bar').append(__reject_action).append(__pass_action).append(__back_action);
+    <%}else{%>
+    $('#__link_bar').append(__back_action);
+    <%}%>
+    function __resizeLinkDialog(__link_dialog_body_div, __width, __height, __btns) {
+        if (__width) {
+            $('#' + __link_dialog_body_div).parent().css('width', __width);
+            $('#' + __link_dialog_body_div).parent().css('margin-left', -__width / 2);
+        }
+        if (__height) {
+            __height = __height > document.documentElement.clientHeight ? document.documentElement.clientHeight : __height;
+            if (__height < 350) {
+                __height = 220;
+            }
+            $('#' + __link_dialog_body_div).parent().css('height', __height);
+            if (__btns == 'none') {
+                $('#' + __link_dialog_body_div).css('height', __height - 35);
+            } else {
+                $('#' + __link_dialog_body_div).css('height', __height - 75);
+            }
+
+            $('#' + __link_dialog_body_div).parent().css('margin-top', -__height / 2);
+        }
+    }
+</script>
+</html>

@@ -1,0 +1,19 @@
+<component name="ArtifactManager">
+  <artifact type="exploded-war" name="artifacts">
+    <output-path>$PROJECT_DIR$/../out/artifacts</output-path>
+    <root id="root">
+      <element id="directory" name="WEB-INF">
+        <element id="directory" name="classes">
+          <element id="module-output" name="EOM_EEM" />
+          <element id="module-output" name="frame_V2" />
+        </element>
+        <element id="directory" name="lib">
+          <element id="library" level="project" name="lib" />
+          <element id="library" level="project" name="primeton_lib" />
+        </element>
+      </element>
+      <element id="javaee-facet-resources" facet="EOM_EEM/web/Web" />
+      <element id="javaee-facet-resources" facet="frame_V2/web/Web" />
+    </root>
+  </artifact>
+</component>

@@ -1,0 +1,1019 @@
+package com.metarnet.eomeem.service.impl;
+
+import com.metarnet.core.common.adapter.AAAAAdapter;
+import com.metarnet.core.common.dao.IBaseDAO;
+import com.metarnet.core.common.exception.DAOException;
+import com.metarnet.core.common.exception.ServiceException;
+import com.metarnet.core.common.model.GeneralInfoModel;
+import com.metarnet.core.common.model.Pager;
+import com.metarnet.core.common.utils.Constants;
+import com.metarnet.core.common.utils.PubFun;
+import com.metarnet.eomeem.model.*;
+import com.metarnet.eomeem.service.IEemCommonService;
+import com.metarnet.eomeem.vo.AnalysisVo;
+import com.ucloud.paas.proxy.aaaa.entity.OrgEntity;
+import com.ucloud.paas.proxy.aaaa.entity.UserEntity;
+import com.ucloud.paas.proxy.aaaa.util.PaasAAAAException;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.springframework.stereotype.Service;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
+import java.net.URLDecoder;
+import java.sql.Timestamp;
+import java.util.*;
+
+/**
+ * Created by Administrator on 2016/6/2.
+ */
+@Service
+public class EemCommonServiceImpl implements IEemCommonService {
+
+    private Logger logger = LogManager.getLogger(this.getClass());
+
+    @Resource
+    private IBaseDAO baseDAO;
+
+    @Override
+    public Pager queryDataList(Pager pager, String type, UserEntity userEntity,Long sign) throws ServiceException {
+        try {
+            OrgEntity orgEntity = AAAAAdapter.getCompany(userEntity.getOrgID().intValue());
+            StringBuffer hql = new StringBuffer("from ExcelPage where deletedFlag=0 ");
+            if ("todo".equals(type)) {
+                hql.append(" and workOrderStatus='未审核'");
+            } /*else if ("query".equals(type)) {
+            hql.append(" and workOrderStatus='已审核'");
+        }*/
+            if ("UNI".equals(userEntity.getCategory())) {
+                hql.append(" and length(reportOrgCode)=3 ");
+                hql.append(" and applyId=1  ");
+            } else {
+                hql.append(" and applyId=2  ");
+                if (orgEntity != null) {
+                    if ("todo".equals(type)) {
+//                        hql.append(" and reportOrgCode like '" + orgEntity.getOrgCode() + "%' and reportOrgCode!='" + orgEntity.getOrgCode() + "'");
+                        hql.append(" and reportOrgCode like '" + orgEntity.getOrgCode() + "%' ");
+                    } else {
+                        hql.append(" and reportOrgCode like '" + orgEntity.getOrgCode() + "%'");
+                    }
+                }
+            }
+            Map<String, Object> queryMap = new HashMap<String, Object>();
+
+            Map<String, Object> params = pager.getParameters();
+            if (params.size() > 0) {
+                if (params.get("tempId") != null && StringUtils.isNotBlank(params.get("tempId").toString())) {
+                    hql.append(" and tpInputID = " + params.get("tempId"));
+                }
+                if (params.get("year") != null && StringUtils.isNotBlank(params.get("year").toString())) {
+                    hql.append(" and reportYear = '" + params.get("year") + "'");
+                }
+                if (params.get("deptIds") != null && StringUtils.isNotBlank(params.get("deptIds").toString())) {
+                    String orgCodes = "";
+                    for (String orgId : params.get("deptIds").toString().split(",")) {
+                        OrgEntity org = AAAAAdapter.getInstence().findOrgByOrgID(Long.parseLong(orgId));
+                        orgCodes += "'" + org.getOrgCode() + "',";
+                    }
+//                    hql.append(" and reportOrgCode in（" + orgCodes.substring(0,orgCodes.length()-1)+")");
+                    hql.append(" and reportOrgCode in(:aaaa)");
+                    queryMap.put("aaaa", orgCodes.substring(1, orgCodes.length() - 2));
+                }
+                if (params.get("reportDate") != null && StringUtils.isNotBlank(params.get("reportDate").toString())&&!params.get("reportDate").equals("全年")) {
+                    String reportDate = params.get("reportDate").toString();
+                    hql.append(" and reportDate ='" + reportDate + "'");
+                }
+            }
+            pager = baseDAO.getPageByHql(hql.toString(), pager, queryMap);
+        } catch (DAOException e) {
+            e.printStackTrace();
+        } catch (PaasAAAAException e) {
+            e.printStackTrace();
+        }
+        for (Object excelPage : pager.getExhibitDatas()) {
+            ExcelPage excelPage1 = (ExcelPage) excelPage;
+//            excelPage1.setDateGrading(excelPage1.getReportYear()+">"+excelPage1.getReportDate());
+            ((ExcelPage) excelPage).setDateGrading(excelPage1.getReportYear() + "-" + excelPage1.getReportDate());
+        }
+        pager.setIsSuccess(true);
+        int pageSize = pager.getPageSize();
+        int recordCount = pager.getRecordCount();
+        int pageCount = pager.getPageCount();
+        pageCount = recordCount / pageSize + (recordCount % pageSize > 0 ? 1 : 0);
+        pager.setPageCount(pageCount);
+        return pager;
+    }
+
+    @Override
+    public Pager queryDataList2(Pager pager, String type, UserEntity userEntity,Long sign) throws ServiceException {
+        StringBuffer sql = new StringBuffer("select distinct ep.pageid as objectId,ep.tpInputName,ep.OPER_USER_TRUE_NAME as operUserTrueName,ep.OPER_ORG_NAME as operOrgName,ep.OPER_USER_PHONE as operUserPhone,ep.reportDate ,ep.reportYear,ep.CREATION_TIME as creationTime,gim.PROCESSING_STATUS,gim.OPER_DESC as audit_info from t_eem_excel_page ep left join t_eom_general_info gim on ep.pageid=gim.PROCESSING_OBJECT_ID where (ep.WORK_ORDER_STATUS='已审核' or ep.WORK_ORDER_STATUS='审核退回') and gim.OPER_USER_ID=" + userEntity.getUserId()+" and ep.APPLY_ID="+sign);
+        StringBuffer countSql = new StringBuffer("select count(distinct ep.pageid) as num from t_eem_excel_page ep left join t_eom_general_info gim on ep.pageid=gim.PROCESSING_OBJECT_ID where (ep.WORK_ORDER_STATUS='已审核' or ep.WORK_ORDER_STATUS='审核退回') and gim.OPER_USER_ID=" + userEntity.getUserId()+" and ep.APPLY_ID="+sign);
+        try {
+            Map<String, Object> params = pager.getParameters();
+            if (params.size() > 0) {
+                if (params.get("tempId") != null && StringUtils.isNotBlank(params.get("tempId").toString())) {
+                    sql.append(" and ep.tpInputID = " + params.get("tempId"));
+                }
+                if (params.get("year") != null && StringUtils.isNotBlank(params.get("year").toString())) {
+                    sql.append(" and ep.reportYear = " + params.get("year"));
+                }
+                if (params.get("reportDate") != null && StringUtils.isNotBlank(params.get("reportDate").toString())&&!params.get("reportDate").equals("全年")) {
+                    sql.append(" and ep.reportDate ='" + params.get("reportDate") + "'");
+                }
+            }
+            pager = baseDAO.findNativeSQL(sql.toString(), null, pager);
+            List<Map> list = baseDAO.findNativeSQL(countSql.toString(), null);
+            if (list.size() > 0) {
+                if (list.get(0).get("num") != null) {
+                    pager.setRecordCount(Integer.parseInt(list.get(0).get("num").toString()));
+                }
+            }
+            for (Object excelPage : pager.getExhibitDatas()) {
+                Map<String, Object> objectMap = (Map<String, Object>) excelPage;
+                objectMap.put("dateGrading", objectMap.get("reportyear") + "-" + objectMap.get("reportdate"));
+            }
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        pager.setIsSuccess(true);
+        int pageSize = pager.getPageSize();
+        int recordCount = pager.getRecordCount();
+        int pageCount = pager.getPageCount();
+        pageCount = recordCount / pageSize + (recordCount % pageSize > 0 ? 1 : 0);
+        pager.setPageCount(pageCount);
+        return pager;
+    }
+
+    @Override
+    public Pager sumDataList(Pager pager, UserEntity userEntity) throws ServiceException {
+        StringBuffer hql = new StringBuffer("from EvaluationCollectExcel ere where ere.deletedFlag=0 ");
+        Map<String, Object> queryMap = new HashMap<String, Object>();
+        try {
+            Map<String, Object> params = pager.getParameters();
+            if (params.size() > 0) {
+                if (params.get("tempId") != null && StringUtils.isNotBlank(params.get("tempId").toString())) {
+                    hql.append(" and ere.formId = " + params.get("tempId"));
+                }
+                if (params.get("year") != null && StringUtils.isNotBlank(params.get("year").toString())) {
+                    hql.append(" and ere.reportYear = " + params.get("year"));
+                }
+                if (params.get("reportDate") != null && StringUtils.isNotBlank(params.get("reportDate").toString())) {
+                    hql.append(" and ere.reportDate ='" + params.get("reportDate") + "'");
+                }
+            }
+            hql.append(" order by ere.creationTime desc");
+            pager = baseDAO.getPageByHql(hql.toString(), pager, queryMap);
+            for (EvaluationCollectExcel evaluationCollectExcel : (List<EvaluationCollectExcel>) pager.getExhibitDatas()) {
+                evaluationCollectExcel.setDateGrading(evaluationCollectExcel.getReportYear() + "-" + evaluationCollectExcel.getReportDate());
+            }
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        pager.setIsSuccess(true);
+        int pageSize = pager.getPageSize();
+        int recordCount = pager.getRecordCount();
+        int pageCount = pager.getPageCount();
+        pageCount = recordCount / pageSize + (recordCount % pageSize > 0 ? 1 : 0);
+        pager.setPageCount(pageCount);
+        return pager;
+    }
+
+    @Override
+    public Pager queryCancelList(Pager pager, UserEntity userEntity) throws ServiceException {
+        try {
+            String orgCode = userEntity.getOrgCode();
+            if(userEntity.getCategory().equals("CITY")){
+                orgCode = orgCode.substring(0,5);
+            }else {
+                orgCode = orgCode.substring(0,3);
+            }
+            String sql = "SELECT teep.OPER_ORG_NAME reportDept,teep.reportYear reportYear,teep.reportDate reportDate,teep.tpInputName tempName,tegi.OPER_USER_TRUE_NAME cancelPerson,tegi.OPER_TIME cancelDate,tegi.OPER_DESC cancelDesc from t_eom_general_info tegi LEFT JOIN t_eem_excel_page  teep ON tegi.PROCESSING_OBJECT_ID=teep.pageid and tegi.PROCESSING_STATUS ='N' where teep.reportOrgCode like '" + orgCode + "%'";
+            pager = baseDAO.findNativeSQL(sql, null, pager);
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        pager.setIsSuccess(true);
+        int pageSize = pager.getPageSize();
+        int recordCount = pager.getRecordCount();
+        int pageCount = pager.getPageCount();
+        pageCount = recordCount / pageSize + (recordCount % pageSize > 0 ? 1 : 0);
+        pager.setPageCount(pageCount);
+        return pager;
+    }
+
+    @Override
+    public Pager queryDeductList(Pager pager, UserEntity userEntity) throws ServiceException {
+        try {
+//            String orgCode = userEntity.getOrgCode();
+            StringBuffer hql = new StringBuffer(" select * from t_eem_deduct_excel_page where pageid>0 ");
+            Map<String, Object> params = pager.getParameters();
+            if (params.size() > 0) {
+                if (params.get("year") != null && StringUtils.isNotBlank(params.get("year").toString())) {
+                    hql.append(" and reportYear = '" + params.get("year") + "'");
+                }
+                if (params.get("reportDate") != null && StringUtils.isNotBlank(params.get("reportDate").toString())) {
+                    String reportDate = params.get("reportDate").toString();
+                    hql.append(" and reportDate ='" + reportDate + "'");
+                }
+
+                if (params.get("tempId") != null && StringUtils.isNotBlank(params.get("tempId").toString())) {
+                    String tempId = params.get("tempId").toString();
+                    hql.append(" and tpInputID ='" + tempId + "'");
+                }
+            }
+
+            pager = baseDAO.findNativeSQL(hql.append(" order by pageid desc").toString(), null, pager);
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        pager.setIsSuccess(true);
+        int pageSize = pager.getPageSize();
+        int recordCount = pager.getRecordCount();
+        int pageCount = pager.getPageCount();
+        pageCount = recordCount / pageSize + (recordCount % pageSize > 0 ? 1 : 0);
+        pager.setPageCount(pageCount);
+        return pager;
+    }
+
+    /**
+     * 统计分析
+     *
+     * @param pager
+     * @param userEntity
+     * @return
+     * @throws ServiceException
+     */
+    @Override
+    public Pager countAnalysis(Pager pager, UserEntity userEntity) throws ServiceException {
+        /**
+         * 1)	及时率：任务拟稿中规定任务上报周期，一次任务需要上报N张报表，任务结束时间内上报报表M张，及时率算法为：M/N*100；
+         2)	准确率：一次任务中规定上报N张报表，在填报过程中被上级单位驳回M次（同一张报表被驳回多次，累加）；准确率算法为：（N-M）/N*100%；
+         3)	及时率环比：环比=（本周期及时率－上周期及时率）/本周期及时率×100%；
+         4)	准确率环比：环比=（本周期准确率－上周期准确率）/本周期准确率×100%；
+         5)	统计分析模块菜单权限前期只对集团用户开放；
+         将符合条件的数据都查出来，然后进行过滤计算
+         */
+        List<AnalysisVo> analysisVoList = new ArrayList<AnalysisVo>();
+        try {
+            Map<String, Object> params = pager.getParameters();
+            int year = Calendar.getInstance().get(Calendar.YEAR);
+            int month = Calendar.getInstance().get(Calendar.MONTH)+1;
+            String reportDate = "上半年";
+            String reportYear = String.valueOf(year);
+            if(month<7){
+                reportYear = String.valueOf(year-1);
+                reportDate = "下半年";
+            }
+
+            String preReportYear = "";
+            String preReportDate = "";
+            String endTime = "";
+            String preEndTime = "";
+            if (params.size() > 0) {
+                String param = params.get("reportDate").toString();
+                reportYear = param.split("-")[0];
+                reportDate = param.split("-")[1];
+            }
+            if (reportDate.equals("上半年")) {
+                preReportYear = reportYear+ "";
+                preReportDate = "第四季度";
+                endTime = reportYear + "-07-20";
+                preEndTime = reportYear + "-07-20";
+            } else if (reportDate.equals("下半年")) {
+                preReportYear = reportYear;
+                preReportDate = "第一季度";
+                endTime = reportYear + "-01-20";
+                preEndTime = reportYear + "-01-20";
+            } else if (reportDate.equals("第三季度")) {
+                preReportYear = reportYear;
+                preReportDate = "第二季度";
+                endTime = reportYear + "-10-29";
+                preEndTime = reportYear + "-07-29";
+            } else if (reportDate.equals("第四季度")) {
+                preReportYear = reportYear;
+                preReportDate = "第三季度";
+                endTime = (Integer.parseInt(reportYear) + 1) + "-01-29";
+                preEndTime = reportYear + "-10-29";
+            }
+            String timelyRateSql="";
+            String accuracyRateSql="";
+            String preTimelyRateSql="";
+            String preAccuracyRateSql="";
+            if(reportDate.equals("全年")) {
+                timelyRateSql = "SELECT t2.OPER_ORG_NAME AS province, t2.OPER_USER_TRUE_NAME AS reportPerson, t2.OPER_USER_PHONE AS reportTel, t2.reportOrgCode, CASE WHEN t2.CREATION_TIME < '"+endTime+" 00:00:00' THEN 1 ELSE 0 END AS num FROM t_eem_excel_page t2 JOIN ( SELECT min(t1.pageid) pageid FROM t_eem_excel_page t1 WHERE t1.reportYear = '2016' AND t1.reportDate = '上半年' and t1.APPLY_ID=1 GROUP BY t1.tpInputID, t1.reportOrgCode ) t3 ON t2.pageid = t3.pageid " +
+                        "UNION " +
+                        "SELECT t2.OPER_ORG_NAME AS province, t2.OPER_USER_TRUE_NAME AS reportPerson, t2.OPER_USER_PHONE AS reportTel, t2.reportOrgCode, CASE WHEN t2.CREATION_TIME < '"+endTime+" 00:00:00' THEN 1 ELSE 0 END AS num FROM t_eem_excel_page t2 JOIN ( SELECT min(t1.pageid) pageid FROM t_eem_excel_page t1 WHERE t1.reportYear = '2016' AND t1.reportDate = '下半年' and t1.APPLY_ID=1  GROUP BY t1.tpInputID, t1.reportOrgCode ) t3 ON t2.pageid = t3.pageid " ;
+//                        "UNION " +
+//                        "SELECT t2.OPER_ORG_NAME AS province, t2.OPER_USER_TRUE_NAME AS reportPerson, t2.OPER_USER_PHONE AS reportTel, t2.reportOrgCode, CASE WHEN t2.CREATION_TIME < '"+endTime+" 00:00:00' THEN 1 ELSE 0 END AS num FROM t_eem_excel_page t2 JOIN ( SELECT min(t1.pageid) pageid FROM t_eem_excel_page t1 WHERE t1.reportYear = '2016' AND t1.reportDate = '第三季度' GROUP BY t1.tpInputID, t1.reportOrgCode ) t3 ON t2.pageid = t3.pageid " +
+//                        "UNION " +
+//                        "SELECT t2.OPER_ORG_NAME AS province, t2.OPER_USER_TRUE_NAME AS reportPerson, t2.OPER_USER_PHONE AS reportTel, t2.reportOrgCode, CASE WHEN t2.CREATION_TIME < '"+endTime+" 00:00:00' THEN 1 ELSE 0 END AS num FROM t_eem_excel_page t2 JOIN ( SELECT min(t1.pageid) pageid FROM t_eem_excel_page t1 WHERE t1.reportYear = '2016' AND t1.reportDate = '第四季度' GROUP BY t1.tpInputID, t1.reportOrgCode ) t3 ON t2.pageid = t3.pageid ";
+                //本周期准确率数据查询sql
+                accuracyRateSql = "SELECT sum(rejectNum) num, t1.reportOrgCode FROM t_eem_excel_page t1 WHERE t1.reportYear = '"+reportYear+"' AND t1.reportDate = '上半年' and t1.APPLY_ID=1  GROUP BY t1.reportOrgCode " +
+                        "UNION " +
+                        "SELECT sum(rejectNum) num, t1.reportOrgCode FROM t_eem_excel_page t1 WHERE t1.reportYear = '"+reportYear+"' AND t1.reportDate = '下半年' and t1.APPLY_ID=1  GROUP BY t1.reportOrgCode " ;
+//                        "UNION " +
+//                        "SELECT sum(rejectNum) num, t1.reportOrgCode FROM t_eem_excel_page t1 WHERE t1.reportYear = '"+reportYear+"' AND t1.reportDate = '第三季度' GROUP BY t1.reportOrgCode " +
+//                        "UNION " +
+//                        "SELECT sum(rejectNum) num, t1.reportOrgCode FROM t_eem_excel_page t1 WHERE t1.reportYear = '"+reportYear+"' AND t1.reportDate = '第四季度' GROUP BY t1.reportOrgCode";
+                //上周期及时率数据查询sql
+                preTimelyRateSql = "SELECT t2.OPER_ORG_NAME AS province, t2.OPER_USER_TRUE_NAME AS reportPerson, t2.OPER_USER_PHONE AS reportTel, t2.reportOrgCode, CASE WHEN t2.CREATION_TIME < '"+preEndTime+" 00:00:00' THEN 1 ELSE 0 END AS num FROM t_eem_excel_page t2 JOIN ( SELECT min(t1.pageid) pageid FROM t_eem_excel_page t1 WHERE t1.reportYear = '2016' AND t1.reportDate = '上半年' and t1.APPLY_ID=1  GROUP BY t1.tpInputID, t1.reportOrgCode ) t3 ON t2.pageid = t3.pageid " +
+                        "UNION " +
+                        "SELECT t2.OPER_ORG_NAME AS province, t2.OPER_USER_TRUE_NAME AS reportPerson, t2.OPER_USER_PHONE AS reportTel, t2.reportOrgCode, CASE WHEN t2.CREATION_TIME < '"+preEndTime+" 00:00:00' THEN 1 ELSE 0 END AS num FROM t_eem_excel_page t2 JOIN ( SELECT min(t1.pageid) pageid FROM t_eem_excel_page t1 WHERE t1.reportYear = '2016' AND t1.reportDate = '下半年' and t1.APPLY_ID=1 GROUP BY t1.tpInputID, t1.reportOrgCode ) t3 ON t2.pageid = t3.pageid " ;
+//                        "UNION " +
+//                        "SELECT t2.OPER_ORG_NAME AS province, t2.OPER_USER_TRUE_NAME AS reportPerson, t2.OPER_USER_PHONE AS reportTel, t2.reportOrgCode, CASE WHEN t2.CREATION_TIME < '"+preEndTime+" 00:00:00' THEN 1 ELSE 0 END AS num FROM t_eem_excel_page t2 JOIN ( SELECT min(t1.pageid) pageid FROM t_eem_excel_page t1 WHERE t1.reportYear = '2016' AND t1.reportDate = '第三季度' GROUP BY t1.tpInputID, t1.reportOrgCode ) t3 ON t2.pageid = t3.pageid " +
+//                        "UNION " +
+//                        "SELECT t2.OPER_ORG_NAME AS province, t2.OPER_USER_TRUE_NAME AS reportPerson, t2.OPER_USER_PHONE AS reportTel, t2.reportOrgCode, CASE WHEN t2.CREATION_TIME < '"+preEndTime+" 00:00:00' THEN 1 ELSE 0 END AS num FROM t_eem_excel_page t2 JOIN ( SELECT min(t1.pageid) pageid FROM t_eem_excel_page t1 WHERE t1.reportYear = '2016' AND t1.reportDate = '第四季度' GROUP BY t1.tpInputID, t1.reportOrgCode ) t3 ON t2.pageid = t3.pageid ";
+                //上周期准确率数据查询sql
+                 preAccuracyRateSql = "SELECT sum(rejectNum) num, t1.reportOrgCode FROM t_eem_excel_page t1 WHERE t1.reportYear = '"+preReportYear+"' and t1.APPLY_ID=1  AND t1.reportDate = '上半年' GROUP BY t1.reportOrgCode " +
+                         "UNION " +
+                         "SELECT sum(rejectNum) num, t1.reportOrgCode FROM t_eem_excel_page t1 WHERE t1.reportYear = '"+preReportYear+"' and t1.APPLY_ID=1  AND t1.reportDate = '下半年' GROUP BY t1.reportOrgCode " ;
+//                         "UNION " +
+//                         "SELECT sum(rejectNum) num, t1.reportOrgCode FROM t_eem_excel_page t1 WHERE t1.reportYear = '"+preReportYear+"' AND t1.reportDate = '第三季度' GROUP BY t1.reportOrgCode " +
+//                         "UNION " +
+//                         "SELECT sum(rejectNum) num, t1.reportOrgCode FROM t_eem_excel_page t1 WHERE t1.reportYear = '"+preReportYear+"' AND t1.reportDate = '第四季度' GROUP BY t1.reportOrgCode";
+            }else{
+                //本周期及时率数据查询sql
+                timelyRateSql = "SELECT " +
+                        "t2.OPER_ORG_NAME AS province, " +
+                        "t2.OPER_USER_TRUE_NAME AS reportPerson, " +
+                        "t2.OPER_USER_PHONE AS reportTel, " +
+                        "t2.reportOrgCode, " +
+                        "case when t2.CREATION_TIME < '"+endTime+" 00:00:00' then 1 else 0 end as num " +
+                        "FROM " +
+                        "t_eem_excel_page t2 " +
+                        "JOIN ( " +
+                        "SELECT " +
+                        "min(t1.pageid) pageid " +
+                        "FROM " +
+                        "t_eem_excel_page t1 " +
+                        "WHERE " +
+                        "t1.reportYear = '" + reportYear + "' " +
+                        "  and t1.APPLY_ID=1 AND t1.reportDate = '" + reportDate + "' " +
+                        "GROUP BY " +
+                        "t1.tpInputID,t1.reportOrgCode " +
+                        ") t3 ON t2.pageid = t3.pageid ";
+                //本周期准确率数据查询sql
+                accuracyRateSql = "SELECT " +
+                        "sum(rejectNum) num, " +
+                        "t1.reportOrgCode " +
+                        "FROM " +
+                        "t_eem_excel_page t1 " +
+                        "WHERE " +
+                        "t1.reportYear = '" + reportYear + "' " +
+                        "  and t1.APPLY_ID=1 AND t1.reportDate = '" + reportDate + "' " +
+                        "GROUP BY " +
+                        "t1.reportOrgCode";
+                //上周期及时率数据查询sql
+                preTimelyRateSql = "SELECT " +
+                        "t2.OPER_ORG_NAME AS province, " +
+                        "t2.OPER_USER_TRUE_NAME AS reportPerson, " +
+                        "t2.OPER_USER_PHONE AS reportTel, " +
+                        "t2.reportOrgCode, " +
+                        "case when t2.CREATION_TIME < '"+preEndTime+" 00:00:00' then 1 else 0 end as num " +
+                        "FROM " +
+                        "t_eem_excel_page t2 " +
+                        "JOIN ( " +
+                        "SELECT " +
+                        "min(t1.pageid) pageid " +
+                        "FROM " +
+                        "t_eem_excel_page t1 " +
+                        "WHERE " +
+                        "t1.reportYear = '" + preReportYear + "' " +
+                        "and t1.APPLY_ID=1 AND t1.reportDate = '" + preReportDate + "' " +
+                        "GROUP BY " +
+                        "t1.tpInputID,t1.reportOrgCode " +
+                        ") t3 ON t2.pageid = t3.pageid ";
+                //上周期准确率数据查询sql
+                preAccuracyRateSql = "SELECT " +
+                        "sum(rejectNum) num, " +
+                        "t1.reportOrgCode " +
+                        "FROM " +
+                        "t_eem_excel_page t1 " +
+                        "WHERE " +
+                        "t1.reportYear = '" + preReportYear + "' " +
+                        "and t1.APPLY_ID=1 AND t1.reportDate = '" + preReportDate + "' " +
+                        "GROUP BY " +
+                        "t1.reportOrgCode";
+            }
+            List list = baseDAO.find("select new EemTempEntity(objectId,tempName) from EemTempEntity where deletedFlag=0 and tempType=1 ");
+
+            List<Map> currentTimelyRateList = baseDAO.findNativeSQL(timelyRateSql, null);
+            List<Map> currentAccuracyRateList = baseDAO.findNativeSQL(accuracyRateSql, null);
+            List<Map> preTimelyRateList = baseDAO.findNativeSQL(preTimelyRateSql, null);
+            List<Map> preAccuracyRateList = baseDAO.findNativeSQL(preAccuracyRateSql, null);
+            List<OrgEntity> orgEntityList = null;
+            try {
+                orgEntityList = AAAAAdapter.getInstence().findOrgListAndSelfByParentID(1L, false);
+            } catch (PaasAAAAException e) {
+                e.printStackTrace();
+            }
+            for (OrgEntity orgEntity : orgEntityList) {
+                if (orgEntity.getOrgCode().startsWith("1") || orgEntity.getOrgCode().startsWith("81") || orgEntity.getOrgCode().startsWith("51")) {
+                    continue;
+                } else {
+                    AnalysisVo vo = new AnalysisVo();
+                    vo.setProvinceName(orgEntity.getOrgName());
+                    vo.setProvinceCode(orgEntity.getOrgCode());
+                    analysisVoList.add(vo);
+                }
+            }
+            //本期及时率及准确率
+            for (AnalysisVo vo : analysisVoList) {
+                Double reportNum = 0d;
+                Double rejectNum = 0d;
+                Set<String> nameSet = new HashSet<String>();
+                for (Map map : currentTimelyRateList) {
+                    if (map.get("reportorgcode") != null && map.get("reportorgcode").equals(vo.getProvinceCode())) {
+                        reportNum++;
+                        nameSet.add(map.get("reportperson") + "(" + map.get("reporttel") + ")");
+                    }
+                }
+                vo.setReportPerson(nameSet.toString().substring(1,nameSet.toString().length()-1));
+                for (Map map : currentAccuracyRateList) {
+                    if (map.get("reportorgcode") != null && map.get("reportorgcode").equals(vo.getProvinceCode())&&map.get("num")!=null) {
+                        rejectNum += Double.parseDouble(map.get("num").toString());
+                    }
+                }
+                if(StringUtils.isBlank(vo.getReportPerson())){
+                    vo.setTimelyRate(0d);
+                    vo.setAccuracyRate(0d);
+                }else{
+                    Double timelyRate = (reportNum / list.size()) * 100;//本期及时率;
+                    Double accuracyRate = (list.size() - rejectNum) / list.size() * 100;//本期准确率
+                    vo.setTimelyRate(new BigDecimal(timelyRate).setScale(2, BigDecimal.ROUND_HALF_UP).doubleValue());
+                    vo.setAccuracyRate(new BigDecimal(accuracyRate).setScale(2, BigDecimal.ROUND_HALF_UP).doubleValue());
+                }
+            }
+            //上期及时率及准确率
+            for (AnalysisVo vo : analysisVoList) {
+                Double reportNum = 0d;
+                Double rejectNum = 0d;
+                for (Map map : preTimelyRateList) {
+                    if (map.get("reportorgcode") != null && map.get("reportorgcode").equals(vo.getProvinceCode())) {
+                        reportNum++;
+                    }
+                }
+                for (Map map : preAccuracyRateList) {
+                    if (map.get("reportorgcode") != null && map.get("reportorgcode").equals(vo.getProvinceCode())&&map.get("num")!=null) {
+                        rejectNum += Double.parseDouble(map.get("num").toString());
+                    }
+                }
+                Double preAccuracyRate = 0d;
+                Double preTimelyRate = (reportNum / list.size()) * 100;//上期及时率;
+                if (rejectNum > 0) {
+                    preAccuracyRate = (list.size() - rejectNum) / list.size() * 100;//上期准确率
+                }
+                if (vo.getTimelyRate() <= 0) {
+                    vo.setMomTimelyRate(0d);
+                } else {
+                    vo.setMomTimelyRate(new BigDecimal(Math.abs(vo.getTimelyRate() - preTimelyRate) / vo.getTimelyRate() * 100).setScale(2, BigDecimal.ROUND_HALF_UP).doubleValue());
+                }
+                if (vo.getAccuracyRate() <= 0) {
+                    vo.setMomAccuracyRate(0d);
+                } else {
+                    vo.setMomAccuracyRate(new BigDecimal(Math.abs(vo.getAccuracyRate() - preAccuracyRate) / vo.getAccuracyRate() * 100).setScale(2, BigDecimal.ROUND_HALF_UP).doubleValue());
+                }
+            }
+            pager.setExhibitDatas(analysisVoList);
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        pager.setIsSuccess(true);
+        pager.setPageCount(analysisVoList.size() > 0 ? 1 : 0);
+        pager.setRecordCount(analysisVoList.size());
+        pager.setPageSize(analysisVoList.size());
+        return pager;
+    }
+
+    @Override
+    public String saveAudit(GeneralInfoModel generalInfoModel, UserEntity userEntity) throws ServiceException {
+        try {
+            generalInfoModel.setOperUserId(userEntity.getUserId());
+            generalInfoModel.setOperUserTrueName(userEntity.getTrueName());
+            generalInfoModel.setOperOrgId(userEntity.getOrgID());
+            generalInfoModel.setOperOrgName(userEntity.getOrgEntity().getOrgName());
+            generalInfoModel.setOperFullOrgName(userEntity.getOrgEntity().getFullOrgName());
+            generalInfoModel.setOperTime(new Timestamp(new Date().getTime()));
+            Map orgInfo = null;
+
+            orgInfo = PubFun.getOrgInfoByOrgID(Integer.parseInt(AAAAAdapter.getCompany(userEntity.getOrgID().intValue()).getOrgId().toString()));
+
+            // 所属省分
+            generalInfoModel.setBelongProvinceCode(orgInfo.get(PubFun.BELONGEDPROVINCE) == null ? null : ((Long) orgInfo.get(PubFun.BELONGEDPROVINCE)).intValue());
+            //所属省分中文
+            generalInfoModel.setBelongProvinceName(orgInfo.get(PubFun.BELONGEDPROVINCENAME) == null ? null : ((String) orgInfo.get(PubFun.BELONGEDPROVINCENAME)));
+            // 所属地市
+            generalInfoModel.setBelongCityCode(orgInfo.get(PubFun.BELONGEDCITY) == null ? null : ((Long) orgInfo.get(PubFun.BELONGEDCITY)).intValue());
+            //所属地市中文
+            generalInfoModel.setBelongCityName(orgInfo.get(PubFun.BELONGEDCITYNAME) == null ? null : ((String) orgInfo.get(PubFun.BELONGEDCITYNAME)));
+            generalInfoModel.setObjectId(baseDAO.getSequenceNextValue(generalInfoModel.getClass()));
+            ExcelPage excelPage = (ExcelPage) baseDAO.get(ExcelPage.class, generalInfoModel.getProcessingObjectID());
+            if (Constants.Y.equals(generalInfoModel.getProcessingStatus())) {
+                excelPage.setWorkOrderStatus("已审核");
+            } else {
+                excelPage.setWorkOrderStatus("审核退回");
+                Integer num = excelPage.getRejectNum();
+                if (num == null) {
+                    num = 1;
+                } else {
+                    num++;
+                }
+                excelPage.setRejectNum(num);
+            }
+            baseDAO.saveOrUpdate(generalInfoModel);
+            baseDAO.saveOrUpdate(excelPage);
+        } catch (PaasAAAAException e) {
+            e.printStackTrace();
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @Override
+    public List<EemTempEntity> findTempList(String type, UserEntity userEntity) throws ServiceException {
+        try {
+            if (type.equals("report")) {
+                String hql = "select new EemTempEntity(objectId,tempName,reportedFrequency,tempType,tempPattern,attribute1,level) from EemTempEntity where deletedFlag=0 and tempType=1";
+                if(userEntity!=null&&userEntity.getCategory().equals("CITY")){
+                    hql+=" and level!=3";
+                }
+                return baseDAO.find(hql);
+            } else if (type.equals("sum")) {
+                return baseDAO.find("select new EemTempEntity(objectId,tempName,reportedFrequency,tempType,tempPattern,attribute1,level) from EemTempEntity where deletedFlag=0 and tempType=2");
+            }else if(type.equals("deduct")){
+                return baseDAO.find("select new EemTempEntity(objectId,tempName,shortName,reportedFrequency,tempType,tempPattern,attribute1,level,applyId) from EemTempEntity where deletedFlag=0 and tempType=3");
+            }
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @Override
+    public EvaluationReportExcel findEvaluationReportExcelByEid(String ObjectId) throws ServiceException, DAOException {
+        List<EvaluationReportExcel> list = baseDAO.find("from EvaluationReportExcel a where a.objectId=" + Long.parseLong(ObjectId));
+        EvaluationReportExcel nt = null;
+        if (list != null && list.size() > 0) {
+            nt = list.get(0);
+        }
+        return nt;
+    }
+
+    @Override
+    public EvaluationCollectExcel findEvaluationCollectExcelById(Long id) throws ServiceException, DAOException {
+        EvaluationCollectExcel collectExcel = (EvaluationCollectExcel) baseDAO.get(EvaluationCollectExcel.class, id);
+        return collectExcel;
+    }
+
+    @Override
+    public void saveOrderReportDate(String reportData, UserEntity userEntity, boolean isOrder) throws ServiceException {
+        try {
+            OrgEntity company = AAAAAdapter.getCompany(Integer.parseInt(userEntity.getOrgEntity().getOrgId().toString()));
+            EvaluationReportTime reportTime = new EvaluationReportTime();
+            List<EvaluationReportTime> reportTimeList = baseDAO.find("from EvaluationReportTime where ywdepart='" + company.getOrgCode() + "' and isReport='" + reportData + "'");
+            if (reportTimeList.size() > 0) {
+                reportTime = reportTimeList.get(0);
+                if (isOrder) {
+                    reportTime.setDeletedFlag(false);
+                } else {
+                    reportTime.setDeletedFlag(true);
+                }
+            } else {
+                reportTime.setYwdepart(company.getOrgCode());
+                reportTime.setName(company.getOrgName());
+                reportTime.setIsReport(reportData);
+                reportTime.setCreatedBy(userEntity.getUserId());
+                reportTime.setCreaterTrueName(userEntity.getTrueName());
+                reportTime.setDeletedFlag(false);
+                reportTime.setObjectID(baseDAO.getSequenceNextValue(EvaluationReportTime.class));
+            }
+            baseDAO.saveOrUpdate(reportTime);
+        } catch (PaasAAAAException e) {
+            e.printStackTrace();
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public Pager queryReportExcel(Pager pager, UserEntity userEntity) throws ServiceException {
+        StringBuffer hql = new StringBuffer("from EvaluationReportExcel where 1=1 ");
+        Map<String, Object> queryMap = new HashMap<String, Object>();
+        int year = Calendar.getInstance().get(Calendar.YEAR);
+        int month = Calendar.getInstance().get(Calendar.MONTH) + 1;
+        try {
+            Map<String, Object> params = pager.getParameters();
+            if (params.get("reportData") != null) {
+               String  reportDateStr="下半年";
+//                String param = URLDecoder.decode(params.get("reportData").toString(),"UTF-8");
+                String param = params.get("reportData").toString();
+                if(month<7){
+                    reportDateStr="下半年";
+                    year =year-1;
+                }else {
+                    reportDateStr="上半年";
+                }
+                if (param.equals("上一周期")) {
+                    if("上半年".equals(reportDateStr)){
+                        reportDateStr="下半年";
+                        year =year-1;
+                    }else {
+                        reportDateStr="上半年";
+                    }
+                }
+
+                if("年度汇总".equals(param)){
+                    reportDateStr = "全年";
+                }
+                if("前推第二周期".equals(param)){
+                    year =year-1;
+                }
+                hql.append(" and reportYear='" + year + "'");
+                hql.append(" and reportDate='" + reportDateStr + "'");
+            } else {
+
+
+                if (month <7 ) {
+                    hql.append(" and reportYear='" + (year - 1) + "'");
+                    hql.append(" and reportDate='下半年'");
+                }
+                if (month>6) {//当年第一季度
+                    hql.append(" and reportYear='" + year + "'");
+                    hql.append(" and reportDate='上半年'");
+                }
+               /* if (month <3) {//当年第二季度
+                    hql.append(" and reportYear='" + (year - 1) + "'");
+                    hql.append(" and reportDate='上半年'");
+                }*/
+//                if (month == 10 || month == 11 || month == 12) {//当年第三季度
+//                    hql.append(" and reportYear='" + year + "'");
+//                    hql.append(" and reportDate='第三季度'");
+//                }
+            }
+            pager = baseDAO.getPageByHql(hql.toString(), pager, queryMap);
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        pager.setIsSuccess(true);
+        int pageSize = pager.getPageSize();
+        int recordCount = pager.getRecordCount();
+        int pageCount = pager.getPageCount();
+        pageCount = recordCount / pageSize + (recordCount % pageSize > 0 ? 1 : 0);
+        pager.setPageCount(pageCount);
+        return pager;
+    }
+
+    @Override
+    public List<EemTempEntity> findTempList2(String type, UserEntity userEntity) throws ServiceException {
+        try {
+            if (type.equals("report")) {
+                return baseDAO.find(" from EemTempEntity where deletedFlag=0 and tempType=1");
+            } else if (type.equals("sum")) {
+                return baseDAO.find(" from EemTempEntity where deletedFlag=0 and tempType=2 and objectId!=47");
+//                return baseDAO.find(" from EemTempEntity where deletedFlag=0 and tempType=2 and objectId=100");
+            }
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @Override
+    public boolean isButton(String isOrder, UserEntity userEntity) throws ServiceException {
+        try {
+            if (!"root".equals(userEntity.getUserName())) {
+                List<EvaluationReportTime> reportTimeList = baseDAO.find("from EvaluationReportTime where deletedFlag=0 and isReport='" + isOrder + "'");
+                if (reportTimeList.size() > 0) {
+                    return false;
+                } else {
+                    return true;
+                }
+            }
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        return true;
+    }
+
+    @Override
+    public List<EemTempEntity> getAllUseExcelTempletList(Integer type) {
+        List<EemTempEntity> eemTempEntityList = null;
+        try {
+            eemTempEntityList = baseDAO.find("select new EemTempEntity(objectId,tempName,shortName) from EemTempEntity where deletedFlag=0 and tempType=1 and reportedFrequency=" + type);
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        return eemTempEntityList;
+    }
+
+    @Override
+    public List findPageList(String dateStr, String year, OrgEntity orgEntity, UserEntity userEntity) {
+        List excelPageList = new ArrayList();
+        StringBuffer hql = new StringBuffer("from ExcelPage where deletedFlag=0");
+        String sql = "";
+        if (userEntity.getCategory().equals("UNI") || "root".equals(userEntity.getUserName())) {
+            sql = "SELECT " +
+                    "t.reportOrgCode, " +
+                    "t.tpInputID, " +
+                    "t.tpInputName, " +
+                    "COUNT(t.pageid) num " +
+                    "FROM " +
+                    "t_eem_excel_page t " +
+                    "GROUP BY " +
+                    "t.tpInputID, " +
+                    "t.reportOrgCode, " +
+                    "t.reportYear, " +
+                    "t.reportDate " +
+                    "HAVING " +
+                    "length(t.reportOrgCode) =3 " +
+                    "AND reportYear = '"+year+"' " +
+                    "AND reportDate = '"+dateStr+"'";
+            hql.append(" and length(reportOrgCode)=3");
+        }else if(userEntity.getCategory().equals("PRO")){
+            sql = "SELECT " +
+                    "t.reportOrgCode, " +
+                    "t.tpInputID, " +
+                    "t.tpInputName, " +
+                    "COUNT(t.pageid) num " +
+                    "FROM " +
+                    "t_eem_excel_page t " +
+                    "GROUP BY " +
+                    "t.tpInputID, " +
+                    "t.reportOrgCode, " +
+                    "t.reportYear, " +
+                    "t.reportDate " +
+                    "HAVING " +
+                    "t.reportOrgCode like '"+orgEntity.getOrgCode()+"%'" +
+                    "AND reportYear = '"+year+"' " +
+                    "AND reportDate = '"+dateStr+"'";
+        } else {
+            sql = "SELECT " +
+                    "t.reportOrgCode, " +
+                    "t.tpInputID, " +
+                    "t.tpInputName, " +
+                    "COUNT(t.pageid) num " +
+                    "FROM " +
+                    "t_eem_excel_page t " +
+                    "GROUP BY " +
+                    "t.tpInputID, " +
+                    "t.reportOrgCode, " +
+                    "t.reportYear, " +
+                    "t.reportDate " +
+                    "HAVING " +
+                    "t.reportOrgCode = '"+orgEntity.getOrgCode()+"' " +
+                    "AND reportYear = '"+year+"' " +
+                    "AND reportDate = '"+dateStr+"'";
+        }
+       /* if (StringUtils.isNotBlank(dateStr)) {
+            hql.append(" and reportDate='" + dateStr + "'");
+        }
+        if (StringUtils.isNotBlank(year)) {
+            hql.append(" and reportYear='" + year + "'");
+        }*/
+        try {
+            excelPageList = baseDAO.findNativeSQL(sql, null);
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        return excelPageList;
+    }
+
+    @Override
+    public List<EvaluationReportExcel> findEvaluationReportExcelByYearAndDate(String reportYear, String reportDate) {
+        StringBuffer hql = new StringBuffer("from EvaluationReportExcel where reportYear='" + reportYear + "'");
+        try {
+            if (StringUtils.isNotBlank(reportDate)) {
+                hql.append(" and reportDate='" + reportDate + "'");
+            }
+            return baseDAO.find(hql.toString());
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @Override
+    public List<EvaluationReportExcel> findEvaluationReportExcelByNew4Q() {
+        List<EvaluationReportExcel> reportExcelList = new ArrayList<EvaluationReportExcel>();
+        int month = Calendar.getInstance().get(Calendar.MONTH) + 1;
+        int year = Calendar.getInstance().get(Calendar.YEAR);
+        String hql = "";
+        if (month == 1 || month == 2 || month == 3) {//上年第四季度
+            hql = "from EvaluationReportExcel where (reportYear='" + (year - 1) + "' and reportDate='第四季度') or (reportYear='" + (year - 1) + "' and reportDate='第三季度') or (reportYear='" + (year - 1) + "' and reportDate='第二季度') or (reportYear='" + (year - 1) + "' and reportDate='第一季度')";
+        }
+        if (month == 4 || month == 5 || month == 6) {//当年第一季度
+            hql = "from EvaluationReportExcel where (reportYear='" + year + "' and reportDate='第一季度') or (reportYear='" + (year - 1) + "' and reportDate='第四季度') or (reportYear='" + (year - 1) + "' and reportDate='第三季度') or (reportYear='" + (year - 1) + "' and reportDate='第二季度')";
+        }
+        if (month == 7 || month == 8 || month == 9) {//当年第二季度
+            hql = "from EvaluationReportExcel where (reportYear='" + year + "' and reportDate='第二季度') or (reportYear='" + year + "' and reportDate='第一季度') or (reportYear='" + (year - 1) + "' and reportDate='第四季度') or (reportYear='" + (year - 1) + "' and reportDate='第三季度')";
+        }
+        if (month == 10 || month == 11 || month == 12) {//当年第三季度
+            hql = "from EvaluationReportExcel where (reportYear='" + year + "' and reportDate='第三季度') or (reportYear='" + year + "' and reportDate='第二季度') or (reportYear='" + year + "' and reportDate='第一季度') or (reportYear='" + (year - 1) + "' and reportDate='第四季度')";
+        }
+        try {
+            reportExcelList = baseDAO.find(hql);
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        return reportExcelList;
+    }
+
+    @Override
+    public Pager findTimelyRateInfo(Pager pager,String provinceCode, String reportDate) {
+        try {
+            if(pager.getParameters().size()>0){
+                reportDate = pager.getParameters().get("reportDate").toString();
+                provinceCode = pager.getParameters().get("provinceCode").toString();
+            }
+            String[] arr = reportDate.split("-");
+            String time = "";
+            String hql = "";
+            if(StringUtils.isNotBlank(reportDate)){
+                if (arr[1].equals("上半年")) {
+                    time = arr[0] + "-01-20 00:00:00";
+                    hql = "from ExcelPage where reportOrgCode='" + provinceCode + "' and reportYear='" + arr[0] + "' and reportDate='" + arr[1] + "' and creationTime>='" + time + "'";
+                } else if (arr[1].equals("下半年")) {
+                    time = arr[0] + "-07-20 00:00:00";
+                    hql ="from ExcelPage where reportOrgCode='" + provinceCode + "' and reportYear='" + arr[0] + "' and reportDate='" + arr[1] + "' and creationTime>='" + time + "'";
+                } /*else if (arr[1].equals("第三季度")) {
+                time = arr[0] + "-11-01 00:00:00";
+                hql = "from ExcelPage where reportOrgCode='" + provinceCode + "' and reportYear='" + arr[0] + "' and reportDate='" + arr[1] + "' and creationTime>='" + time + "'";
+            } else if (arr[1].equals("第四季度")) {
+                time = (Integer.valueOf(arr[0]) + 1) + "-02-01 00:00:00";
+                hql ="from ExcelPage where reportOrgCode='" + provinceCode + "' and reportYear='" + arr[0] + "' and reportDate='" + arr[1] + "' and creationTime>='" + time + "'";
+            } else if (arr[1].equals("全年")) {
+                String time1 = arr[0] + "-05-01 00:00:00";
+                String time2 = arr[0] + "-05-01 00:00:00";
+                String time3 = arr[0] + "-05-01 00:00:00";
+                String time4 = (Integer.valueOf(arr[0]) + 1) + "-02-01 00:00:00";
+                hql = "from ExcelPage where reportOrgCode='" + provinceCode + "' and reportYear='" + arr[0] + "' and reportDate='第一季度' and creationTime>='" + time1 + "' UNION " +
+                        "from ExcelPage where reportOrgCode='" + provinceCode + "' and reportYear='" + arr[0] + "' and reportDate='第二季度' and creationTime>='" + time2 +"' UNION " +
+                        "from ExcelPage where reportOrgCode='" + provinceCode + "' and reportYear='" + arr[0] + "' and reportDate='第三季度' and creationTime>='" + time3 + "' UNION " +
+                        "from ExcelPage where reportOrgCode='" + provinceCode + "' and reportYear='" + arr[0] + "' and reportDate='第四季度' and creationTime>='" + time4 + "'";
+            }*/
+            }else {
+                int year = Calendar.getInstance().get(Calendar.YEAR);
+                int month =Calendar.getInstance().get(Calendar.MONTH);
+                String monthParam ="下半年";
+                if(month>8||month<3){
+                    monthParam="上半年";
+                    if(month<3){
+                        year =year-1;
+                    }
+                }else{
+                    monthParam="下半年";
+                }
+                time = year + "-05-01 00:00:00";
+                hql = "from ExcelPage where reportOrgCode='" + provinceCode + "' and reportYear='" +year + "' and reportDate='" +monthParam +"'";
+            }
+
+           pager = baseDAO.getPageByHql(hql,pager,null);
+            for (ExcelPage excelPage : (List<ExcelPage>)pager.getExhibitDatas()) {
+                excelPage.setDateGrading(excelPage.getReportYear() + "-" + excelPage.getReportDate());
+            }
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        pager.setIsSuccess(true);
+        int pageSize = pager.getPageSize();
+        int recordCount = pager.getRecordCount();
+        int pageCount = pager.getPageCount();
+        pageCount = recordCount / pageSize + (recordCount % pageSize > 0 ? 1 : 0);
+        pager.setPageCount(pageCount);
+        return pager;
+    }
+
+    @Override
+    public Pager findAccuracyRateInfo(Pager pager,String provinceCode, String reportDate) {
+        try {
+            if(pager.getParameters().size()>0){
+                reportDate = pager.getParameters().get("reportDate").toString();
+                provinceCode = pager.getParameters().get("provinceCode").toString();
+            }
+            String[] arr = reportDate.split("-");
+            String sql = "";
+            if (arr[1].equals("全年")) {
+                sql = "SELECT " +
+                        "teep.pageid objectId, " +
+                        "teep.tpInputName, " +
+                        "teep.fileName, " +
+                        "teep.OPER_USER_TRUE_NAME operUserTrueName, " +
+                        "teep.OPER_ORG_NAME operOrgName, " +
+                        "teep.OPER_USER_PHONE operUserPhone, " +
+                        "teep.reportYear, " +
+                        "teep.reportDate, " +
+                        "teep.CREATION_TIME creationTime, " +
+                        "tegj.OPER_TIME rejectTime, " +
+                        "tegj.OPER_DESC signInfo " +
+                        "FROM " +
+                        "t_eem_excel_page teep " +
+                        "LEFT JOIN t_eom_general_info tegj ON teep.pageid = tegj.PROCESSING_OBJECT_ID " +
+                        "AND tegj.PROCESSING_OBJECT_TABLE = 't_eem_excel_page' " +
+                        "WHERE " +
+                        "teep.reportOrgCode='"+provinceCode+"' and teep.reportYear='"+arr[0]+"' and teep.rejectNum>0 ";
+            } else {
+                sql = "SELECT " +
+                        "teep.pageid objectId, " +
+                        "teep.tpInputName, " +
+                        "teep.fileName, " +
+                        "teep.OPER_USER_TRUE_NAME operUserTrueName, " +
+                        "teep.OPER_ORG_NAME operOrgName, " +
+                        "teep.OPER_USER_PHONE operUserPhone, " +
+                        "teep.reportYear, " +
+                        "teep.reportDate, " +
+                        "teep.CREATION_TIME creationTime, " +
+                        "tegj.OPER_TIME rejectTime, " +
+                        "tegj.OPER_DESC signInfo " +
+                        "FROM " +
+                        "t_eem_excel_page teep " +
+                        "LEFT JOIN t_eom_general_info tegj ON teep.pageid = tegj.PROCESSING_OBJECT_ID " +
+                        "AND tegj.PROCESSING_OBJECT_TABLE = 't_eem_excel_page' " +
+                        "WHERE " +
+                        "teep.reportOrgCode='"+provinceCode+"' and teep.reportDate='"+arr[1]+"' and teep.reportYear='"+arr[0]+"' and teep.rejectNum>0 ";
+            }
+            pager = baseDAO.findNativeSQL(sql, null, pager);
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        pager.setIsSuccess(true);
+        int pageSize = pager.getPageSize();
+        int recordCount = pager.getRecordCount();
+        int pageCount = pager.getPageCount();
+        pageCount = recordCount / pageSize + (recordCount % pageSize > 0 ? 1 : 0);
+        pager.setPageCount(pageCount);
+        return pager;
+    }
+
+    @Override
+    public List<ExcelPage> findExcelPages(Long tempID, String deptCode, String reportYear, String reportDate) {
+        try {
+            List<ExcelPage> excelPageList = baseDAO.find("from ExcelPage where tpInputID="+tempID+" and reportOrgCode='"+deptCode+"' and reportYear='"+reportYear+"' and reportDate='"+reportDate+"'");
+            return excelPageList;
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @Override
+    public String saveOrg(HttpServletRequest request, RepotOrg repotOrg, UserEntity userEntity) {
+      String orgIds = repotOrg.getAttribute1();
+        try {
+        String [] arrOrgs = orgIds.split(",");
+            Set set= new HashSet();
+        for(String org:arrOrgs){
+            RepotOrg og = new RepotOrg();
+            OrgEntity orgEntity = AAAAAdapter.getInstence().findOrgByOrgID(Long.parseLong(org.split(":")[0]));
+
+            StringBuilder sql = new StringBuilder("delete from t_eem_repot_org where 1=1 ");
+            int num = 0;
+            sql.append(" and orgId='" + orgEntity.getOrgId() + "'");
+            num = baseDAO.executeSql(sql.toString());
+            logger.info("删除账号" +  orgEntity.getOrgId() + "," + num + "条数据");
+            og.setCityCode(orgEntity.getOrgCode());
+            og.setOrgId(orgEntity.getOrgId().toString());
+            og.setFullOrgName(orgEntity.getFullOrgName());
+            og.setCityName(orgEntity.getOrgName());
+            og.setProvinceCode(orgEntity.getProCode());
+            og.setProvinceName(AAAAAdapter.getInstence().findOrgByOrgCode(orgEntity.getProCode()).getOrgName());
+            og.setType(orgEntity.getOrgType());
+
+            og.setCreatedBy(userEntity.getUserId());
+            og.setCreateTrueName(userEntity.getTrueName());
+            og.setCreateUserName(userEntity.getUserName());
+            og.setCreationTime(new Timestamp(new Date().getTime()));
+            long pId = baseDAO.getSequenceNextValue(RepotOrg.class);
+            og.setObjectId(pId);
+            set.add(og);
+        }
+            baseDAO.saveOrUpdateAll(set);
+        } catch (PaasAAAAException e) {
+            e.printStackTrace();
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        return  "";
+    }
+
+    @Override
+    public String getMangerOrgNams(UserEntity userEntity) {
+       String sql = "SELECT fullOrgName from t_eem_repot_org where PROVINCE_CODE="+userEntity.getOrgEntity().getProCode()+";";
+        StringBuffer   buffer = new StringBuffer();
+        try {
+            List<Map> list = baseDAO.findNativeSQL(sql,null);
+            for(Map map:list){
+                buffer.append(map.get("fullorgname")+",");
+            }
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        if("".equals(buffer.toString())){
+            return "";
+        }
+        return buffer.toString().substring(0,buffer.toString().length()-1);
+    }
+}

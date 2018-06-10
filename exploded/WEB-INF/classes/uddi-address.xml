@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<uddi__address__list>
+    <!--开发-->
+    <uddi__address id="default">
+        <areaName>localserver</areaName>
+        <logicName>default</logicName>
+        <type>http</type>
+        <description></description>
+        <!--开发验证-->
+        <!--<uddiHost>10.249.217.166</uddiHost>-->
+        <!--<uddiHost>10.249.6.33</uddiHost>-->
+        <uddiHost>10.162.64.231</uddiHost>
+        <!--生产-->
+
+        <!--<uddiHost>10.249.217.24</uddiHost>-->
+        <!--<uddiPort>80</uddiPort>-->
+        <uddiPort>8080</uddiPort>
+        <uddiWebContext>bps</uddiWebContext>
+        <uddiUserID>bps</uddiUserID>
+        <uddiPassword>000000</uddiPassword>
+        <uddiAdminPort>6200</uddiAdminPort>
+    </uddi__address>
+</uddi__address__list>

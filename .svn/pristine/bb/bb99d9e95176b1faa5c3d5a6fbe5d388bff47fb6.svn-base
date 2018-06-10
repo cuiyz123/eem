@@ -1,0 +1,27 @@
+package com.metarnet.eomeem.service;
+
+import com.metarnet.core.common.exception.ServiceException;
+import com.metarnet.core.common.model.Pager;
+import com.metarnet.eomeem.model.DeviceEntity;
+import com.metarnet.eomeem.model.ExcelPage;
+import com.ucloud.paas.proxy.aaaa.entity.UserEntity;
+
+import java.util.List;
+
+/**
+ * Created by Administrator on 2016/8/14.
+ */
+public interface IEemQueryService {
+    Pager queryDataList(Pager pager, String type, UserEntity userEntity) throws ServiceException;
+
+    Pager queryDataListAll(Pager pager, String type, UserEntity userEntity) throws ServiceException;
+
+    //整体打包下载
+    List<ExcelPage> downAllProReportExcel(String reportYear,String reportData,String tempId);
+    Pager querySheetList(Pager pager, UserEntity userEntity,Long id) throws ServiceException;
+
+    List<DeviceEntity> findTempListToDevice1(Long id, UserEntity userEntity) throws ServiceException;
+
+    //数据打包下载
+    List<ExcelPage> downAllProReportExcel2(String reportYear,String reportData,String tempId,String proNames);
+}

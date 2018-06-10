@@ -1,0 +1,18 @@
+package com.metarnet.eomeem.service;
+
+import com.metarnet.core.common.exception.ServiceException;
+import com.metarnet.eomeem.model.DeviceTypeEntity;
+import com.ucloud.paas.proxy.aaaa.entity.UserEntity;
+
+import java.util.List;
+
+/**
+ * Created by Administrator on 2016/7/25.
+ */
+public interface IEemDeviceTypeService {
+    List queryDeviceTypeList(Long id,String param, UserEntity userEntity) throws ServiceException;
+
+    String saveDeviceType(DeviceTypeEntity deviceTypeEntity, UserEntity userEntity) throws ServiceException;
+
+    String deleteDeviceType(DeviceTypeEntity deviceTypeEntity, UserEntity userEntity) throws ServiceException;
+}

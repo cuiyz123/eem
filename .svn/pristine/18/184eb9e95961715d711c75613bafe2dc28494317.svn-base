@@ -1,0 +1,333 @@
+<%@ page import="com.ucloud.paas.proxy.aaaa.entity.UserEntity" %>
+<%@ page import="com.metarnet.core.common.adapter.AAAAAdapter" %>
+<%@ page import="org.apache.commons.lang3.StringUtils" %>
+<%@ page import="java.util.Map" %>
+<%@ page import="java.util.HashMap" %>
+<%@ page import="java.util.List" %>
+<%@ page import="java.util.ArrayList" %>
+<%@ page import="com.metarnet.core.common.utils.HttpClientUtil" %>
+<%@ page import="com.metarnet.core.common.utils.Constants" %>
+<%@ page import="com.alibaba.fastjson.JSON" %>
+<!DOCTYPE HTML>
+<%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" language="java" %>
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="component/jquery.dtGrid.v1.1.9/dependents/bootstrap/css/bootstrap.min.css"/>
+    <link rel="stylesheet" type="text/css" href="base/_css/menu.css"/>
+    <style>
+        body{
+            margin: 0px;
+        }
+    </style>
+</head>
+<body onresize="__page_init()">
+<table id="container-table">
+    <tbody>
+    <tr>
+        <td id="model-title-td" style="width:200px;border-right: 0px solid #bbb">
+            <div id="model-title-container">
+                <div id="model-title">设备后评价管理</div>
+                <ul id="menu-ul">
+                    <%
+                        String firstMenu="dataQuery";
+                        UserEntity userEntity = null;
+                        if(request.getSession().getAttribute("globalUniqueUser")!=null&&!"".equals(request.getSession().getAttribute("globalUniqueUser"))){
+                            userEntity = (UserEntity)request.getSession().getAttribute("globalUniqueUser");
+                        }else{
+                            String globalUniqueID = request.getParameter("globalUniqueID");
+                            if(StringUtils.isBlank(globalUniqueID)){
+                                globalUniqueID = (String)request.getSession().getAttribute("globalUniqueID");
+                            }
+                            userEntity = AAAAAdapter.getInstence().findUserBySessionID(globalUniqueID);
+                        }
+                        Map<String,String> uniMenuMap = new HashMap<String, String>();
+                        uniMenuMap.put("todoAudit","eemCommonController.do?method=todo&type=1&nodeID=todoAudit&&type=1:待审核");
+                        uniMenuMap.put("alreadyAudit","eemCommonController.do?method=already&nodeID=alreadyAudit:已审核");
+                        uniMenuMap.put("dataQuery","eemCommonController.do?method=initQueryData&nodeID=dataQuery:数据查询");
+                        uniMenuMap.put("dataQueryAll","eemCommonController.do?method=initQueryDataAll&nodeID=dataQueryAll:公布版数据下载");
+                        uniMenuMap.put("dataSum","eemCommonController.do?method=initSumData:数据汇总");
+                        uniMenuMap.put("appointSum","eemCommonController.do?method=initOrder:预约汇总");
+                        uniMenuMap.put("reportDeductData","deductController.do?method=initReport&nodeID=reportDeductData:集团扣分上报");
+                        uniMenuMap.put("deductAnalysis","deductController.do?method=initAnalysis&nodeID=reportDeductData:集团扣分统计");
+                        uniMenuMap.put("downDeductData","deductController.do?method=initQueryDataAll&nodeID=reportDeductData:集团扣分公示版下载");
+                        uniMenuMap.put("analysis","base/page/countAnalysis.jsp:统计分析");
+                        uniMenuMap.put("notice","base/page/notice.jsp:后评价系统通知");
+                        uniMenuMap.put("managerTemplate","eemCommonController.do?method=initManagerTemplate:按专业配置所有模板");
+                        //uniMenuMap.put("notice","eemNoticeController.do?method=queryNoticeList:后评价系统通知");
+                        uniMenuMap.put("vendorReortManager","eemTemplateController.do?method=initAdd&type=1:报表与厂商关系维护");
+                        uniMenuMap.put("tempManager","eemTemplateController.do?method=initTempPage:模板管理");
+                        uniMenuMap.put("vendorManager","base/page/vendorManager.jsp:厂商管理");
+                      //  uniMenuMap.put("deviceReportManager","base/page/deviceReportManager.jsp:设备类型与填报模板关系");
+                        uniMenuMap.put("deviceTypeManager","eemQueryController.do?method=initDevice:设备类型管理");
+
+
+
+
+                       // uniMenuMap.put("deviceTypeManager","base/page/deviceTypeManager.jsp:设备类型管理");
+                        uniMenuMap.put("todoApply","base/page/todoApply.jsp:待办申请");
+                        uniMenuMap.put("alreadyApply","base/page/alreadyApply.jsp:已办申请");
+                        Map<String,String> proMenuMap = new HashMap<String, String>();
+                        proMenuMap.put("todoAudit","eemCommonController.do?method=todo&type=1alreadyAudit&nodeID=PRO_todoAudit:待审核");
+                        proMenuMap.put("alreadyAudit","eemCommonController.do?method=already&nodeID=PRO_alreadyAudit:已审核");
+                        proMenuMap.put("reportData2","reportController.do?method=initReport&type=2&nodeID=PRO_reportData2:上报数据(数据流向省内)");
+                        proMenuMap.put("reportData","reportController.do?method=initReport&type=1&nodeID=PRO_reportData:上报数据");
+                        proMenuMap.put("dataQuery","eemCommonController.do?method=initQueryData&nodeID=PRO_dataQuery:数据查询");
+                       //proMenuMap.put("dataQueryAll","eemCommonController.do?method=initQueryDataAll&nodeID=PRO_dataQueryAll:公布版数据下载");
+                        proMenuMap.put("notice","base/page/notice.jsp:后评价系统通知");
+                        //proMenuMap.put("notice","eemNoticeController.do?method=queryNoticeList:后评价系统通知");
+                        proMenuMap.put("tempManager","eemTemplateController.do?method=initTempPage:模板管理");
+                        proMenuMap.put("managerRepotOrg","eemCommonController.do?method=initManger:配置省级上报部门（数据流向省内）");
+                        proMenuMap.put("todoApply","base/page/todoApply.jsp:待办申请");
+                        proMenuMap.put("alreadyApply","base/page/alreadyApply.jsp:已办申请");
+                        proMenuMap.put("areportApply","eemCommonController.do?method=todo&type=2&nodeID=areportApply:已申请重新上报");
+                        proMenuMap.put("managerTemplate","eemCommonController.do?method=initManagerTemplate:按专业配置所有模板");
+
+
+
+                        Map<String,String> cityMenuMap = new HashMap<String, String>();
+                        cityMenuMap.put("todoAudit","eemCommonController.do?method=todo&type=1&nodeID=CITY_todoAudit:待审核");
+                        cityMenuMap.put("alreadyAudit","eemCommonController.do?method=already&nodeID=CITY_alreadyAudit:已审核");
+                        cityMenuMap.put("reportData","reportController.do?method=initReport&type=2&nodeID=CITY_reportData:上报数据");
+                        cityMenuMap.put("dataQuery","eemCommonController.do?method=initQueryData&nodeID=CITY_dataQuery:数据查询");
+                       // cityMenuMap.put("dataQueryAll","eemCommonController.do?method=initQueryDataAll&nodeID=CITY_dataQueryAll:公布版数据下载");
+                        cityMenuMap.put("notice","base/page/notice.jsp:后评价系统通知");
+                        //cityMenuMap.put("notice","eemNoticeController.do?method=queryNoticeList:后评价系统通知");
+                        cityMenuMap.put("tempManager","eemTemplateController.do?method=initTempPage:模板管理");
+                        cityMenuMap.put("areportApply","eemCommonController.do?method=todo&type=2&nodeID=CITY_areportApply:已申请重新上报");
+                        cityMenuMap.put("managerTemplate","eemCommonController.do?method=initManagerTemplate:按专业配置所有模板");
+
+                        //此处去权限系统获取数据
+                        Map<String, String> paramsMap = new HashMap<String, String>();
+                        paramsMap.put("userName", userEntity.getUserName());
+                        paramsMap.put("moduleName", "eom_eem");
+                        String result = HttpClientUtil.sendPostRequestByJava(Constants.POWERURL + "/powerController.do?method=findPowerNodeByUserName", paramsMap);
+                        if(result.contains("Failed")){
+                            System.out.println("err------------------------权限系统失败"+result);
+                            result="[]";
+                        }
+                        List<String> participants = JSON.parseArray(result,String.class);
+                        List<String> menuList = new ArrayList<String>();
+                        String defaultUrl = "base/page/noPower.jsp";
+                        Map<String,String> aimMap= uniMenuMap;
+                        if(userEntity.getCategory().equals("CITY")){
+                            aimMap = cityMenuMap;
+                        }else if(userEntity.getCategory().equals("PRO")){
+                            aimMap =proMenuMap;
+                        }
+                        if(participants.contains("todoAudit")&&aimMap.containsKey("todoAudit")){
+                            menuList.add("todoAudit");
+                        }
+                        if(participants.contains("alreadyAudit")&&aimMap.containsKey("alreadyAudit")){
+                            menuList.add("alreadyAudit");
+                            firstMenu ="alreadyAudit";
+                        }
+                        if(participants.contains("todoApply")&&aimMap.containsKey("todoApply")){
+                            menuList.add("todoApply");
+
+                        }
+                        if(participants.contains("alreadyApply")&&aimMap.containsKey("alreadyApply")){
+                            menuList.add("alreadyApply");
+
+                        }
+                        if(participants.contains("areportApply")&&aimMap.containsKey("areportApply")){
+                            menuList.add("areportApply");
+                        }
+                        if(participants.contains("dataQuery")&&aimMap.containsKey("dataQuery")){
+                            menuList.add("dataQuery");
+                            firstMenu ="dataQuery";
+                        }
+                        if(participants.contains("dataQueryAll")&&aimMap.containsKey("dataQueryAll")){
+                            menuList.add("dataQueryAll");
+                            firstMenu ="dataQueryAll";
+                        }
+                        if(participants.contains("reportData")&&aimMap.containsKey("reportData")){
+                            menuList.add("reportData");
+                            firstMenu ="reportData";
+                        }
+                        if(participants.contains("reportData2")&&aimMap.containsKey("reportData2")){
+                            menuList.add("reportData2");
+                            firstMenu ="reportData";
+                        }
+                        if(participants.contains("reportDeductData")&&aimMap.containsKey("reportDeductData")){
+                            menuList.add("reportDeductData");
+                            firstMenu ="reportDeductData";
+                        }
+                        if(participants.contains("deductAnalysis")&&aimMap.containsKey("deductAnalysis")){
+                            menuList.add("deductAnalysis");
+                            firstMenu ="deductAnalysis";
+                        }
+                        if(participants.contains("downDeductData")&&aimMap.containsKey("downDeductData")){
+                            menuList.add("downDeductData");
+                            firstMenu ="downDeductData";
+                        }
+                        if(participants.contains("dataSum")&&aimMap.containsKey("dataSum")){
+                            menuList.add("dataSum");
+                            firstMenu ="dataSum";
+                        }
+                        if(participants.contains("appointSum")&&aimMap.containsKey("appointSum")){
+                            menuList.add("appointSum");
+                            firstMenu ="appointSum";
+                        }
+                        if(participants.contains("analysis")&&aimMap.containsKey("analysis")){
+                            menuList.add("analysis");
+                            firstMenu ="analysis";
+                        }
+                        if(participants.contains("notice")&&aimMap.containsKey("notice")){
+                            menuList.add("notice");
+                            firstMenu ="notice";
+                        }
+                        if(participants.contains("tempManager")&&aimMap.containsKey("tempManager")){
+                            menuList.add("tempManager");
+                            firstMenu ="tempManager";
+                        }
+                        if(participants.contains("vendorManager")&&aimMap.containsKey("vendorManager")){
+                            menuList.add("vendorManager");
+                            firstMenu ="vendorManager";
+                        }
+                        if(participants.contains("vendorReortManager")&&aimMap.containsKey("vendorReortManager")){
+                            menuList.add("vendorReortManager");
+                            firstMenu ="vendorReortManager";
+                        }
+                        if(participants.contains("deviceTypeManager")&&aimMap.containsKey("deviceTypeManager")){
+                            menuList.add("deviceTypeManager");
+                            firstMenu ="deviceTypeManager";
+                        }
+                        if(participants.contains("managerTemplate")&&aimMap.containsKey("managerTemplate")){
+                            menuList.add("managerTemplate");
+//                            firstMenu ="deviceTypeManager";
+                        }
+                        if(userEntity.getAdmin()&&userEntity.getCategory().equals("PRO")){
+                            menuList.add("managerRepotOrg");
+                            firstMenu ="managerRepotOrg";
+                        }
+
+                        /*menuList.add("todoAudit");
+                        menuList.add("alreadyAudit");
+                        menuList.add("dataQuery");
+                        menuList.add("reportData");
+                        menuList.add("dataSum");
+                        menuList.add("appointSum");
+                        menuList.add("analysis");
+                        menuList.add("notice");
+                        menuList.add("tempManager");
+                        menuList.add("vendorManager");
+                        menuList.add("deviceTypeManager");*/
+                        if(userEntity!=null){
+                            if(userEntity.getCategory().equals("UNI")){
+                                for(String menu : menuList){
+                                    if(uniMenuMap.get(menu)!=null){
+                                %>
+                    <li><a href="<%=uniMenuMap.get(menu).split(":")[0]%>" target="__menu_body"><%=uniMenuMap.get(menu).split(":")[1]%></a></li>
+                                <%
+                                        } } }else if(userEntity.getCategory().equals("PRO")){
+                                        for(String menu : menuList){
+                                            if(proMenuMap.get(menu)!=null){
+                                %>
+                    <li><a href="<%=proMenuMap.get(menu).split(":")[0]%>" target="__menu_body"><%=proMenuMap.get(menu).split(":")[1]%></a></li>
+                                <%
+                                        } } }else if(userEntity.getCategory().equals("CITY")){
+                                        for(String menu : menuList){
+                                            if(cityMenuMap.get(menu)!=null){
+                                %>
+                    <li><a href="<%=cityMenuMap.get(menu).split(":")[0]%>" target="__menu_body"><%=cityMenuMap.get(menu).split(":")[1]%></a></li>
+                                <%
+                                        } } }else if(userEntity.getUserName().equals("root")){
+                                %>
+                                    <li><a href="eemCommonController.do?method=todo&type=1" target="__menu_body">待审核</a></li>
+                                    <li><a href="eemCommonController.do?method=already" target="__menu_body">已审核</a></li>
+                                    <li><a href="eemTemplateController.do?method=initAdd&type=1" target="__menu_body">报表与厂商关系维护</a></li>
+                                    <li><a href="reportController.do?method=initReport&type=1" target="__menu_body">上报数据</a></li>
+                                    <li><a href="eemCommonController.do?method=initQueryData" target="__menu_body">数据查询</a></li>
+                                    <li><a href="eemCommonController.do?method=initQueryDataAll" target="__menu_body">公布版数据下载</a></li>
+                                    <li><a href="deductController.do?method=initReport" target="__menu_body">集团扣分上报</a></li>
+                                    <li><a href="deductController.do?method=initAnalysis" target="__menu_body">集团扣分统计</a></li>
+                                    <li><a href="deductController.do?method=initQueryDataAll" target="__menu_body">集团扣分公示版下载</a></li>
+                                    <li><a href="eemCommonController.do?method=initSumData" target="__menu_body">数据汇总</a></li>
+                                    <li><a href="eemCommonController.do?method=initOrder" target="__menu_body">预约汇总</a></li>
+                                    <li><a href="deductController.do?method=initReport" target="__menu_body">集团扣分上报</a></li>
+                                    <li><a href="base/page/countAnalysis.jsp" target="__menu_body">统计分析</a></li>
+                                    <li><a href="base/page/notice.jsp" target="__menu_body">后评价系统通知</a></li>
+                                    <li><a href="eemTemplateController.do?method=initTempPage" target="__menu_body">模板管理</a></li>
+                                    <li><a href="base/page/vendorManager.jsp" target="__menu_body">厂商管理</a></li>
+                                    <li><a href="base/page/deviceTypeManager.jsp" target="__menu_body">设备类型管理</a></li>
+                                    <li><a href="deductController.do?method=initNewReport" target="__menu_body">报表与厂商关系维护</a></li>
+                                    <li><a href="eemCommonController.do?method=initManagerTemplate" target="__menu_body">按专业配置所有模板</a></li>
+
+                                <%
+                                    }
+                                %>
+                                <%
+                        }else{
+                    %>
+                        <div style="color: red">获取用户失败，请重新登录</div>
+                    <%
+                        }
+                    %>
+                </ul>
+            </div>
+        </td>
+        <td id="expand-btn" class="expand-btn-left" style="vertical-align: middle;" onclick="expandMenu(this)"><img id="btn-collapse" src="base/_resources/collapse.png" /><img id="btn-expand" style="display: none;" src="base/_resources/expand.png" /></td>
+        <td>
+            <%
+                if(userEntity.getUserName().equals("root")){
+            %>
+                <iframe frameborder="no" id="__menu_body" name="__menu_body" style="width:100%;overflow-x:hidden;" src="eemCommonController.do?method=todo&type=1">
+
+                </iframe>
+            <%
+                }else{
+                    if(menuList.size()>0){
+                        if(userEntity.getCategory().equals("UNI")){
+                            defaultUrl = uniMenuMap.get(menuList.get(0)).split(":")[0];
+                        }
+                        if(userEntity.getCategory().equals("PRO")){
+                            defaultUrl = proMenuMap.get(menuList.get(0)).split(":")[0];
+                        }
+                        if(userEntity.getCategory().equals("CITY")){
+                            defaultUrl = cityMenuMap.get(menuList.get(0)).split(":")[0];
+                        }
+                    }
+            %>
+                <iframe frameborder="no" id="__menu_body" name="__menu_body" style="width:100%;overflow-x:hidden;" src="<%=defaultUrl%>">
+                </iframe>
+            <%
+                }
+            %>
+
+        </td>
+    </tr>
+    </tbody>
+</table>
+</body>
+<script type="text/javascript"
+        src="component/jquery.dtGrid.v1.1.9/dependents/jquery/jquery.min.js"></script>
+<script>
+    $(document).ready(function(){
+        __page_init();
+    });
+    function __page_init() {
+        document.getElementById('__menu_body').style.height = document.documentElement.clientHeight - 10 + 'px';
+        document.getElementById('menu-ul').style.height = document.documentElement.clientHeight - 50 + 'px';
+    }
+    function expandMenu(expandBtn) {
+
+        var modelTitleTd = $('#model-title-td');
+        if (modelTitleTd.css('display') == 'none') {
+            modelTitleTd.show();
+            $('#btn-collapse').show();
+            $('#btn-expand').hide();
+            $(expandBtn).addClass('expand-btn-left');
+        } else {
+            modelTitleTd.hide();
+            $('#btn-collapse').hide();
+            $('#btn-expand').show();
+            $(expandBtn).removeClass('expand-btn-left');
+        }
+    }
+    $('#menu-ul li a').click(function () {
+        $('#menu-ul li a').removeClass('menu-active');
+        $(this).addClass('menu-active');
+    });
+    $('#menu-ul li a').first().addClass('menu-active');
+</script>
+</html>

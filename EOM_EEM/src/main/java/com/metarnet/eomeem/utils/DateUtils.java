@@ -1,0 +1,332 @@
+package com.metarnet.eomeem.utils;
+
+import java.text.ParsePosition;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+/**
+ * Created by Administrator on 2016/8/12.
+ */
+public class DateUtils {
+    /** Log4j category. */
+    //private static Category cat = Category.getInstance(DateUtil.class);
+
+
+    /**
+     *  Get the current date string representation.
+     *
+     * @param dateFormat the input dateFormat.
+     *        See the <code>java.text.SimpleDateFormat</code> API for date format
+     *        string examples
+     */
+    public static String getCurrentDateString(String dateFormat) {
+        Calendar cal = Calendar.getInstance(TimeZone.getDefault());
+        SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
+        sdf.setTimeZone(TimeZone.getDefault());
+
+        return sdf.format(cal.getTime());
+    }
+
+    //桂宇，直接获取当前日期的"yyyy-MM-dd HH:mm:ss" 格式
+    public static String getCrtDateYYYYMMDDHHmmss() {
+        return getCurrentDateString("yyyy-MM-dd HH:mm:ss");
+    }
+    //桂宇，直接获取当前日期的"yyyy-MM-dd" 格式
+    public static String getCrtDateYYYYMMDD() {
+        return getCurrentDateString("yyyy-MM-dd");
+    }
+    //  扈星宇，直接获取指定日期的"yyyy-MM" 格式
+    public static String getStrFromDateYYYYMM(Date date) {
+        String res=getDateString(date,"yyyy-MM");
+        if(res==null){
+            return "";
+        }else{
+            return res;
+        }
+
+    }
+    //扈星宇，直接获取指定日期的"yyyy-MM" 格式
+    public static Date getDateFromStrYYYYMM(String date) {
+        return getDate(date,"yyyy-MM");
+    }
+    /**
+     *  Get the string representation of the input Date object
+     *
+     * @param date       the input Date object
+     * @param dateFormat a date format string like "dd/MM/yyyy"
+     * @return the string representation of the input Date object
+     */
+    public static String getDateString(Date date, String dateFormat) {
+        if (date!=null) {
+            SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
+            return sdf.format(date);
+        } else {
+            return null;
+        }
+    }
+
+    //桂宇，直接获取指定日期的"yyyy-MM-dd HH:mm:ss" 格式
+    public static String getStrFromDateYYYYMMDDHHmmss(Date date) {
+        return getDateString(date,"yyyy-MM-dd HH:mm:ss");
+    }
+    //桂宇，直接获取指定日期的"yyyy-MM-dd" 格式
+    public static String getStrFromDateYYYYMMDD(Date date) {
+        return getDateString(date,"yyyy-MM-dd");
+    }
+
+
+    /**
+     *  Get a java Date object from an input date string representation.
+     *  <br>
+     *  See the <code>java.text.SimpleDateFormat</code> API for date format string
+     *  examples.
+     *
+     * @param  sDate       the date string representation
+     * @param  dateFormat  a date format string like "dd/MM/yyyy"
+     * @return             the Date object corresponding to the input date string,
+     *                     or null if the conversion fails
+     */
+    public static Date getDate(String sDate, String dateFormat) {
+        if (sDate == null || sDate.trim().equals(""))
+            return null;
+
+        try {
+            SimpleDateFormat fmt = new SimpleDateFormat(dateFormat);
+            ParsePosition pos = new ParsePosition(0);
+            return fmt.parse(sDate.trim(), pos);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+
+    //  桂宇，直接获取指定字符串的Dae对象 "yyyy-MM-dd HH:mm:ss" 格式
+    public static Date getDateFromStrYYYYMMDDHHmmss(String date) {
+        return getDate(date,"yyyy-MM-dd HH:mm:ss");
+    }
+    //桂宇，直接获取指定日期的"yyyy-MM-dd" 格式
+    public static Date getDateFromStrYYYYMMDD(String date) {
+        return getDate(date,"yyyy-MM-dd");
+    }
+    /**
+     *  Add the input number of days to the startDate string representation.
+     *
+     * @param startDate  the start date string representation
+     * @param dateFormat the start date format
+     * @param days       the number of days to add to the startDate
+     * @return the Date object representing the resulting date
+     */
+    public static Date addDays(String startDate, String dateFormat, int days) {
+        return addDays(getDate(startDate, dateFormat), days);
+    }
+
+
+    /**
+     *  Add the input number of days to the start Date object.
+     *
+     * @param startDate  the start Date object
+     * @param days       the number of days to add to the startDate object
+     * @return the Date object representing the resulting date
+     */
+    public static Date addDays(Date startDate, int days) {
+        GregorianCalendar gCal = new GregorianCalendar();
+        gCal.setTime(startDate);
+        gCal.add(Calendar.DATE, days);
+
+        return gCal.getTime();
+    }
+
+    public static Date addWeeks(Date startDate, int weeks) {
+        GregorianCalendar gCal = new GregorianCalendar();
+        gCal.setTime(startDate);
+        gCal.add(Calendar.WEEK_OF_YEAR, weeks);
+
+        return gCal.getTime();
+    }
+
+    public static Date addMonths(Date startDate, int months) {
+        GregorianCalendar gCal = new GregorianCalendar();
+        gCal.setTime(startDate);
+        gCal.add(Calendar.MONTH, months);
+
+        return gCal.getTime();
+    }
+
+    /**
+     *  Add the input number of days to the start Date object.
+     *
+     * @param startDate  the start Date object
+     * @param hours       the number of days to add to the startDate object
+     * @return the Date object representing the resulting date
+     */
+    public static Date addHours(Date startDate, int hours) {
+        GregorianCalendar gCal = new GregorianCalendar();
+        gCal.setTime(startDate);
+        gCal.add(Calendar.HOUR, hours);
+
+        return gCal.getTime();
+    }
+
+    /**
+     *  Add the input number of days to the start Date object.
+     *
+     * @param startDate  the start Date object
+     * @param hours       the number of hours to add to the startDate object
+     * @param dateFormat      the start date format
+     * @return the Date object representing the resulting date
+     */
+    public static Date addHours(String startDate, String dateFormat, int hours) {
+        return addHours(getDate(startDate, dateFormat), hours);
+    }
+
+    /**
+     *  Add the input number of days to the start Date object.
+     *
+     * @param startDate  the start Date object
+     * @param hours       the number of hours to add to the startDate object
+     * @param dateFormat1      the start date format
+     * @param dateFormat2      the end date format
+     * @return the Date object representing the resulting date
+     */
+    public static String addHours(String startDate, String dateFormat1, int hours,String dateFormat2) {
+//         return  getDateString(addDays(getDate(startDate, dateFormat1), hours),dateFormat2);
+
+        return  getDateString(addHours(getDate(startDate, dateFormat1), hours),dateFormat2);
+    }
+
+    /**
+     *  Check if the <code>d</code> input date is between <code>d1</code> and
+     *  <code>d2</code>.
+     *
+     * @param  d   the date to check
+     * @param  d1  the lower boundary date
+     * @param  d2  the upper boundary date
+     * @return     true if d1 <= d <= d2, false otherwise
+     */
+    public static boolean isDateBetween(Date d, Date d1, Date d2) {
+        return ((d1.before(d) || d1.equals(d)) &&
+                (d.before(d2) || d.equals(d2)));
+    }
+
+    public static String getCurrentTime() {
+        String year = String.valueOf(Calendar.getInstance().get(Calendar.YEAR));
+        String month = String.valueOf(Calendar.getInstance().get(Calendar.MONTH)+1);
+        String day = String.valueOf(Calendar.getInstance().get(Calendar.DAY_OF_MONTH));
+        String hour = String.valueOf(Calendar.getInstance().get(Calendar.HOUR_OF_DAY));
+        String minute = String.valueOf(Calendar.getInstance().get(Calendar.MINUTE));
+        String seconds = String.valueOf(Calendar.getInstance().get(Calendar.SECOND));
+
+        if (month.length() == 1)
+            month = "0" + month;
+        if (day.length() == 1)
+            day = "0" + day;
+        if (hour.length() == 1)
+            hour = "0" + hour;
+        if (minute.length() == 1)
+            minute = "0" + minute;
+        if (seconds.length() == 1)
+            seconds = "0" + seconds;
+
+        String time = year + "-" + month + "-" + day + " " + hour + ":" + minute + ":" + seconds;
+        return time;
+        //DateFormat.getDateTimeInstance().format(new Date());
+    }
+
+    public static String getCurrentDate() {
+        Date date = new Date();
+        return DateUtils.getDateString(date, "yyyy-MM-dd");
+        //return DateFormat.getDateInstance().format(new Date());
+    }
+
+    @SuppressWarnings("finally")
+    public static String formatDate(Date theDate) {
+        Locale locale = Locale.CHINA;
+        String dateString = "";
+        try {
+            Calendar cal = Calendar.getInstance(locale);
+            cal.setFirstDayOfWeek(Calendar.TUESDAY);
+            cal.setTime((Date) theDate);
+
+            //DateFormat dateFormatter = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.MEDIUM,locale);
+            SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd", locale);
+            dateString = dateFormatter.format(cal.getTime());
+            //System.out.println(dateString);
+            //System.out.println(cal.get(Calendar.YEAR));
+            //System.out.println(cal.get(cal.DAY_OF_WEEK));
+        } catch (Exception e) {
+            System.out.println("test result:" + e.getMessage());
+        } finally {
+            return dateString;
+        }
+    }
+
+    public static int getDateDiff(Date date1,Date date2,int sign) {
+
+        long base = 1;
+        switch(sign){
+            case Calendar.DATE:
+                base *=1000*60*60*24;
+                break;
+            case Calendar.HOUR:
+                base *=1000*60*60;
+                break;
+            case Calendar.MINUTE:
+                base *=1000*60;
+                break;
+            case Calendar.SECOND:
+                base *=1000;
+                break;
+            default:
+                break;
+        }
+        return (int)((date1.getTime()-date2.getTime())/base);
+    }
+    //    添加 了 返回double 返回值类型的时间差函数，added by xlqu
+    public static double getDateDiffTypeOfDouble(Date date1,Date date2,int sign) {
+        double returnminus;
+        if(date1 == null){
+            date1 = new Date();
+        }
+        if(date2 == null){
+            date2 = new Date();
+        }
+        long base = 1;
+        switch(sign){
+            case Calendar.DATE:
+                base *=1000*60*60*24;
+                break;
+            case Calendar.HOUR:
+                base *=1000*60*60;
+                break;
+            case Calendar.MINUTE:
+                base *=1000*60;
+                break;
+            case Calendar.SECOND:
+                base *=1000;
+                break;
+            default:
+                break;
+        }
+        returnminus = ((double)(date1.getTime()-date2.getTime())/base);
+        return returnminus;
+    }
+    public static int getCurrentYear(){
+        Calendar cal=Calendar.getInstance();
+        return cal.get(Calendar.YEAR);
+    }
+
+    public static int getCurrentMonth(){
+        int month = Calendar.getInstance().get(Calendar.MONTH)+1;
+        return month;
+    }
+
+    public static int getCurrentDay(){
+        int day = Calendar.getInstance().get(Calendar.DAY_OF_MONTH);
+        return day;
+    }
+    public static void main(String arg[]) {
+        Date date = new Date();
+        System.out.println(getDateString(date,"yyyyMMddHHmmss"));
+
+    }
+}

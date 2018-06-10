@@ -1,0 +1,55 @@
+# Database URL  \u9632\u6B62\u62A5\u9519 An attempt by a client to checkout a Connection has timed out \u5728\u8FDE\u63A5\u540E\u6DFB\u52A0\uFF1F\u3002\u3002\u3002\u3002\u3002
+#测试环境
+#jdbc.url=jdbc:mysql://10.249.6.34:3306/eom_eem_adb?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&failOverReadOnly=false
+#jdbc.url=jdbc:mysql://10.249.6.34:3306/eom_eem_adb3?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&failOverReadOnly=false
+#生产环境
+jdbc.url=jdbc:mysql://10.162.66.3:3306/eom_eem_adb?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&failOverReadOnly=false
+#jdbc.url=jdbc:mysql://10.162.64.235:3306/eom_eem_adb?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&failOverReadOnly=false&autoReconnect=true
+#本地环境
+#jdbc.url=jdbc:mysql://127.0.0.1:3306/eom_eem_adb?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&failOverReadOnly=false
+#廊坊测试环境
+#jdbc.url=jdbc:mysql://10.162.64.118:3306/eom_eem_adb?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&failOverReadOnly=false
+
+
+# Database login information
+#jdbc.username=primeton
+#jdbc.password=primeton
+jdbc.username=metarnet
+jdbc.password=Metarnet123
+#jdbc.username=root
+#jdbc.password=123456
+
+# Time to wait for an open connection before timing out
+# (in milliseconds)
+cpool.checkoutTimeout=50
+
+# Connection pool size
+cpool.minPoolSize=1
+cpool.maxPoolSize=30
+
+# How long to keep unused connections around(in seconds)
+# Note: MySQL times out idle connections after 8 hours(28,800 seconds)
+# so ensure this value is below MySQL idle timeout
+cpool.maxIdleTime=50
+
+# How long to hang on to excess unused connections after traffic spike
+# (in seconds)
+cpool.maxIdleTimeExcessConnections=180
+
+# Acquiring new connections is slow, so eagerly retrieve extra connections
+# when current pool size is reached
+cpool.acquireIncrement=5
+
+jdbc.testWhileIdle=false
+jdbc.testOnBorrow=true
+jdbc.testOnReturn=false
+jdbc.poolPreparedStatements=true
+jdbc.maxPoolPreparedStatementPerConnectionSize=20
+jdbc.filters=stat,log4j,wall
+jdbc.validationQuery=select 1
+jdbc.timeBetweenEvictionRunsMillis=30000
+jdbc.maxActive=300
+jdbc.initialSize=30
+jdbc.maxWait=60000
+jdbc.minEvictableIdleTimeMillis=30000
+jdbc.minIdle=0

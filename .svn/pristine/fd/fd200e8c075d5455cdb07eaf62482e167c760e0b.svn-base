@@ -1,0 +1,220 @@
+package com.metarnet.eomeem.controller;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.serializer.SerializeConfig;
+import com.alibaba.fastjson.serializer.SerializerFeature;
+import com.alibaba.fastjson.serializer.SimpleDateFormatSerializer;
+import com.metarnet.core.common.adapter.FileAdapter;
+import com.metarnet.core.common.controller.BaseController;
+import com.metarnet.core.common.exception.UIException;
+import com.metarnet.core.common.model.DownloadFileInfo;
+import com.metarnet.core.common.model.Pager;
+import com.metarnet.core.common.utils.PagerPropertyUtils;
+import com.metarnet.eomeem.model.EemTempEntity;
+import com.metarnet.eomeem.model.ExcelPage;
+import com.metarnet.eomeem.service.IEemQueryService;
+import com.metarnet.eomeem.service.IEemTemplateService;
+import com.metarnet.eomeem.utils.DateUtils;
+import com.metarnet.eomeem.utils.EemConstants;
+import com.metarnet.eomeem.utils.FileUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.tools.zip.ZipEntry;
+import org.apache.tools.zip.ZipOutputStream;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import javax.annotation.Resource;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.*;
+import java.net.URLDecoder;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+/**
+ * Created by Administrator on 2016/8/14.
+ */
+@Controller
+public class EemQueryController extends BaseController {
+    @Resource
+    private IEemQueryService eemQueryService;
+    @Resource
+    private IEemTemplateService eemTemplateService;
+    private static final int OUTPUT_SIZE = 4096;
+    private static final String CHARACTER_GB2312 = "gb2312";
+
+    private static final String CHARACTER_ISO8859 = "ISO8859-1";
+
+    /**
+     * 数据查询
+     *
+     * @param response
+     * @param request
+     * @param type
+     * @throws UIException
+     */
+    @RequestMapping(value = "/eemQueryController.do", params = "method=queryDataList")
+    @ResponseBody
+    public void queryDataList(HttpServletResponse response, HttpServletRequest request, String type) throws UIException {
+        try {
+            Pager pager = PagerPropertyUtils.copy(request.getParameter("dtGridPager"));
+            pager = eemQueryService.queryDataList(pager, type, getUserEntity(request));
+            SerializeConfig ser = new SerializeConfig();
+            ser.put(Timestamp.class, new SimpleDateFormatSerializer("yyyy-MM-dd HH:mm:ss"));
+            endHandle(request, response, JSON.toJSONString(pager, ser, SerializerFeature.WriteNullListAsEmpty), "queryTemplateList");
+        } catch (Exception e) {
+            throw new UIException("queryTemplateList", e);
+        }
+    }
+
+    /**
+     * 公布版数据下载查询
+     *
+     * @param response
+     * @param request
+     * @param type
+     * @throws UIException
+     */
+    @RequestMapping(value = "/eemQueryController.do", params = "method=queryDataListAll")
+    @ResponseBody
+    public void queryDataListAll(HttpServletResponse response, HttpServletRequest request, String type) throws UIException {
+        try {
+            Pager pager = PagerPropertyUtils.copy(request.getParameter("dtGridPager"));
+            pager = eemQueryService.queryDataListAll(pager, type, getUserEntity(request));
+            SerializeConfig ser = new SerializeConfig();
+            ser.put(Timestamp.class, new SimpleDateFormatSerializer("yyyy-MM-dd HH:mm:ss"));
+            endHandle(request, response, JSON.toJSONString(pager, ser, SerializerFeature.WriteNullListAsEmpty), "queryTemplateList");
+        } catch (Exception e) {
+            throw new UIException("queryTemplateList", e);
+        }
+    }
+
+    @RequestMapping(value = "/eemQueryController.do", params = "method=downAllProReportExcel")
+    @ResponseBody
+    public void downAllProReportExcel(HttpServletResponse response, HttpServletRequest request, String reportYear, String reportData,String tempId) throws UIException {
+        String dataString = new Date().getTime() + "";
+        File files = null;
+
+        ServletOutputStream servletOutputStream = null;
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        ZipOutputStream zos = new ZipOutputStream(byteArrayOutputStream);
+        try {
+            reportData = URLDecoder.decode(reportData,"UTF-8");
+            servletOutputStream = response.getOutputStream();
+            List<ExcelPage> excelPageList = new ArrayList<ExcelPage>();
+            files = new File(EemConstants.GATHER_DATA_PATH + "/temp/" + dataString);
+            if (!files.exists()) {
+                files.mkdirs();
+            }
+            if (StringUtils.isNotBlank(reportYear) && StringUtils.isNotBlank(reportData)) {//当前年度
+                excelPageList = eemQueryService.downAllProReportExcel(reportYear, reportData,tempId);
+            }
+            List<EemTempEntity> reportTempEntityList = eemTemplateService.findAllTempEntity("report");
+
+            for (EemTempEntity eemTempEntity : reportTempEntityList) {
+                String dir = "";
+                FileAdapter fileAdapter = FileAdapter.getInstance();
+
+                List<DownloadFileInfo> downloadFileInfoList = new ArrayList<DownloadFileInfo>();
+                for (ExcelPage ere : excelPageList) {
+                    if (eemTempEntity.getObjectId().equals(ere.getTpInputID())) {
+                        DownloadFileInfo downloadFileInfo = fileAdapter.download(ere.getAttachmentId());
+                        String downloadFileName = ere.getOperOrgName() + ere.getFileName() + ".xls"; // new
+                        downloadFileInfo.setFileName(downloadFileName);
+                        downloadFileInfoList.add(downloadFileInfo);
+                    }
+                }
+                if (downloadFileInfoList.size() > 0) {
+                    ByteArrayOutputStream byteArrayOutputStream1 = new ByteArrayOutputStream();
+                    ZipOutputStream zipOutputStream = new ZipOutputStream(byteArrayOutputStream1);
+                    FileOutputStream fos = new FileOutputStream(EemConstants.GATHER_DATA_PATH + "/temp/" + dataString + "/" + eemTempEntity.getShortName() + ".zip");
+                    int i = 0;
+                    for (DownloadFileInfo downloadFileInfo : downloadFileInfoList) {
+                        String downloadFileName = downloadFileInfo.getFileName();
+                        zipOutputStream.putNextEntry(new ZipEntry(downloadFileName));
+                        int len;
+                        // 每次写出4M
+                        byte[] b = new byte[OUTPUT_SIZE];
+
+                        InputStream inputStream = new ByteArrayInputStream(downloadFileInfo.getByteArrayOutputStream().toByteArray());
+                        while ((len = inputStream.read(b)) != -1) {
+                            zipOutputStream.write(b, 0, len);
+                        }
+                        zipOutputStream.closeEntry();
+                        inputStream.close();
+                        i++;
+                    }
+                    zipOutputStream.setEncoding("GBK");
+                    byte[] ba = byteArrayOutputStream1.toByteArray();
+                    if (ba != null) {
+                        fos.write(ba);
+                    }
+                    zipOutputStream.flush();
+                    zipOutputStream.close();
+                    byteArrayOutputStream1.flush();
+                    byteArrayOutputStream1.close();
+                    fos.flush();
+                    fos.close();
+
+                } else {
+                    continue;
+                }
+                if (StringUtils.isNotBlank(dir)) {
+                    FileUtils.filesToZip(dir, EemConstants.GATHER_DATA_PATH + "/temp/" + dataString, eemTempEntity.getShortName());
+                }
+            }
+
+            File[] fileArr = files.listFiles();
+            String fileName = "打包下载.zip";
+            //在服务器端创建打包下载的临时文件
+            fileName = new String(fileName.getBytes(CHARACTER_GB2312), CHARACTER_ISO8859);
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
+            if (fileArr != null) {
+                for (int i = 0; i < fileArr.length; i++) {
+                    String downloadFileName = fileArr[i].getName(); // new
+                    downloadFileName = (i + 1) + "_" + downloadFileName;
+                    zos.putNextEntry(new ZipEntry(downloadFileName));
+                    int len;
+                    // 每次写出4M
+                    byte[] b = new byte[OUTPUT_SIZE];
+                    InputStream inputStream = new FileInputStream(fileArr[i]);
+                    while ((len = inputStream.read(b)) != -1) {
+                        zos.write(b, 0, len);
+                    }
+                    zos.closeEntry();
+                    inputStream.close();
+                }
+            }
+            zos.setEncoding("GBK");
+            zos.flush();
+            zos.close();
+            byte[] ba = byteArrayOutputStream.toByteArray();
+            if (ba != null) {
+                servletOutputStream.write(ba);
+            }
+            byteArrayOutputStream.flush();
+            byteArrayOutputStream.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                servletOutputStream.flush();
+                servletOutputStream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            if (files != null) {
+                try {
+                    org.apache.commons.io.FileUtils.deleteDirectory(files);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+}

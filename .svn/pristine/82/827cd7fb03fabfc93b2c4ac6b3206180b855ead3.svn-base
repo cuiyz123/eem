@@ -1,0 +1,376 @@
+package com.metarnet.eomeem.controller;
+
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.serializer.SerializeConfig;
+import com.alibaba.fastjson.serializer.SerializerFeature;
+import com.alibaba.fastjson.serializer.SimpleDateFormatSerializer;
+import com.metarnet.core.common.adapter.FileAdapter;
+import com.metarnet.core.common.controller.BaseController;
+import com.metarnet.core.common.exception.ServiceException;
+import com.metarnet.core.common.exception.UIException;
+import com.metarnet.core.common.model.DownloadFileInfo;
+import com.metarnet.core.common.model.Pager;
+import com.metarnet.core.common.model.TEomAttachmentRelProc;
+import com.metarnet.core.common.utils.PagerPropertyUtils;
+import com.metarnet.eomeem.model.DeductExcelPage;
+import com.metarnet.eomeem.model.EemTempEntity;
+import com.metarnet.eomeem.model.ExcelPage;
+import com.metarnet.eomeem.service.IEemCommonService;
+import com.metarnet.eomeem.service.IEemDeductService;
+import com.metarnet.eomeem.service.IEemNoticeService;
+import com.metarnet.eomeem.service.IEemReportService;
+import com.metarnet.eomeem.time.AutoReport;
+import com.ucloud.paas.proxy.aaaa.entity.UserEntity;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.tools.zip.ZipEntry;
+import org.apache.tools.zip.ZipOutputStream;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.view.InternalResourceView;
+
+import javax.annotation.Resource;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.net.URLDecoder;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
+@Controller
+public class EemDeductController extends BaseController {
+    private static final String CHARACTER_GB2312 = "gb2312";
+
+    private static final String CHARACTER_ISO8859 = "ISO8859-1";
+
+    private static final String DATE_PATTERN = "yyyyMMddHHmmss_SSSSS";
+
+    /**
+     * 最多同时下载500个文件
+     */
+    private static final int MAX_DOWNLOAD_COUNT = 500;
+
+    /**
+     * 每次最多写出4MB
+     */
+    private static final int OUTPUT_SIZE = 4096;
+
+    @Resource
+    private IEemDeductService deductService;
+    @Resource
+    private IEemNoticeService eemNoticeService;
+
+    @Resource
+    private AutoReport autoReport;
+
+    @Resource
+    private IEemCommonService eemCommonService;
+
+
+    //初始化
+    @RequestMapping(value = "/deductController.do", params = "method=initReport")
+    @ResponseBody
+    public ModelAndView initReport(HttpServletRequest request, HttpServletResponse response) throws UIException {
+        UserEntity userEntity = getUserEntity(request);
+        DeductExcelPage excelPage = deductService.initReport(userEntity, request, null);
+        request.setAttribute("report", excelPage);
+        try {
+            List<EemTempEntity> tempEntityList = eemCommonService.findTempList("deduct", getUserEntity(request));
+            request.setAttribute("tempList",tempEntityList);
+//            request.setAttribute("noticeList", eemNoticeService.findNoticeList(userEntity));
+            request.setAttribute("yearStr", String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));
+        } catch (ServiceException e) {
+            e.printStackTrace();
+        }
+        return new ModelAndView(new InternalResourceView("/base/page/reportDeductData.jsp"));
+    }
+
+//    @RequestMapping(value = "/deductController.do", params = "method=excelToPage")
+//    @ResponseBody
+    public void excelToPage(HttpServletRequest request, HttpServletResponse response) throws UIException {
+        MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
+        MultipartFile file = multipartRequest.getFile("excelData");
+        String result = deductService.excelToPage(file);
+        endHandle(request, response, result, this.getClass().getName() + "uploaded successfully!");
+
+    }
+
+    //数据查询  下载
+//    @RequestMapping(value = "/deductController.do", params = "method=downReportData")
+    public void downReportData(HttpServletRequest request, HttpServletResponse response, String objectId) throws UIException {
+        try {
+            DeductExcelPage excelPage = deductService.getExcelPage(Long.parseLong(objectId));
+//            HSSFWorkbook workbook = reportService.downReportData(objectId);
+            TEomAttachmentRelProc attachmentRelProc = new TEomAttachmentRelProc();
+            attachmentRelProc.setAttachmentId(excelPage.getAttachmentId());
+            attachmentRelProc.setAttachmentName(excelPage.getOperOrgName()+"-"+excelPage.getFileName()+".xls");
+            List<TEomAttachmentRelProc> dataList = new ArrayList<TEomAttachmentRelProc>();
+            dataList.add(attachmentRelProc);
+            downloadFiles(dataList,response,1);
+           /* String fileName = "";
+            fileName = com.metarnet.eomeem.utils.StringUtils.toUtf8String(request.getHeader("User-Agent"), excelPage.getOperOrgName() + "_" + excelPage.getTpInputName());
+            response.setContentType("application/x-msdownload");
+            response.addHeader("Content-Disposition", "attachment; filename="
+                    + fileName + ".xls");
+
+            OutputStream os = response.getOutputStream();
+            HSSFFormulaEvaluator.evaluateAllFormulaCells(workbook);
+            workbook.write(os);
+            os.flush();
+            os.close();*/
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+//    @RequestMapping(value = "/deductController.do", params = "method=checkReport")
+    @ResponseBody
+    public void checkReport(HttpServletRequest request, HttpServletResponse response, ExcelPage excelPage) throws UIException {
+        boolean flag = true;
+        flag = deductService.checkReport(excelPage, getUserEntity(request));
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("flag", flag);
+        endHandle(request, response, jsonObject, "checkReport");
+    }
+    @RequestMapping(value = "/deductController.do", params = "method=deleteReportData")
+    @ResponseBody
+    public void deleteeReportData(HttpServletRequest request, HttpServletResponse response, String  pageid) throws UIException {
+        boolean flag = true;
+        flag = deductService.deleteReportData(pageid, getUserEntity(request));
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("flag", flag);
+        endHandle(request, response, jsonObject, "deleteReportData");
+    }
+
+    //数据查询  查看
+//    @RequestMapping(value = "/deductController.do", params = "method=showReportData")
+    public String showReportData(HttpServletRequest request, HttpServletResponse response, String objectId, String type) throws UIException {
+        String tempHTML = deductService.excelToHtmlByID(objectId);
+        request.setAttribute("tempHTML", tempHTML);
+        request.setAttribute("type", type);
+        request.setAttribute("objectId", objectId);
+        return "forward:base/page/reportExcelShow.jsp";
+    }
+
+    //------------------------------------------------------------华丽丽的分割线-----------------------------------------------------
+    @RequestMapping(value = "/deductController.do", params = "method=importReportData")
+    public void importReportData(HttpServletRequest request, HttpServletResponse response, DeductExcelPage excelPage, String sheetName,String withdraw) throws UIException {
+        UserEntity userEntity = getUserEntity(request);
+        MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
+        MultipartFile file = multipartRequest.getFile("excelData");
+        String msg = "";
+        try {
+            msg = deductService.saveReportData(request,file, excelPage, sheetName, withdraw,userEntity);
+        } catch (Exception e) {
+            msg = "系统内部运行异常";
+            e.printStackTrace();
+        } finally {
+            JSONObject jsonObject = new JSONObject();
+            if (StringUtils.isBlank(msg)) {
+                jsonObject.put("success", true);
+                jsonObject.put("msg", "导入成功！");
+            } else {
+                jsonObject.put("false", false);
+                jsonObject.put("msg", msg);
+            }
+            endHandle(request, response, jsonObject, "importReportData");
+        }
+    }
+
+    @RequestMapping(value = "/deductController.do", params = "method=checkIsReportedSamePage")
+    public void checkIsReportedSamePage(HttpServletRequest request, HttpServletResponse response, DeductExcelPage excelPage) throws UIException {
+        JSONObject jsonObject = new JSONObject();
+        String hasPowerToSave = deductService.hasPowerToSave(excelPage, getUserEntity(request));
+        jsonObject.put("msg",hasPowerToSave);
+        endHandle(request, response, jsonObject, "checkIsReportedSamePage");
+    }
+
+//    @RequestMapping(value = "/deductController.do", params = "method=checkIsReportedSamePage2")
+    public void checkIsReportedSamePage2(HttpServletRequest request, HttpServletResponse response, ExcelPage excelPage) throws UIException {
+        JSONObject jsonObject = new JSONObject();
+        String hasPowerToSave = deductService.hasPowerToSave2(excelPage, getUserEntity(request));
+        jsonObject.put("msg",hasPowerToSave);
+        endHandle(request, response, jsonObject, "checkIsReportedSamePage2");
+    }
+
+    @RequestMapping(value = "/deductController.do", params = "method=download")
+    @ResponseBody
+    public void download(HttpServletRequest request, HttpServletResponse response,String attachmentid,String name) throws UIException {
+        try {
+            DownloadFileInfo[] downloadFileInfos = new DownloadFileInfo[500];
+            FileAdapter fileAdapter = FileAdapter.getInstance();
+            ServletOutputStream servletOutputStream = response.getOutputStream();
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            String [] attacheIds = attachmentid.split(",");
+            // 用户需下载的文件计数
+            int index = 0;
+            for (String attacheId : attacheIds) {
+                    downloadFileInfos[index] = fileAdapter.download(attacheId);
+                index++;
+            }
+
+            // 下载一个文件
+            if (index == 1) {
+                String filename = new String(downloadFileInfos[0].getFileName().getBytes("gb2312"),
+                        "ISO8859-1");
+                response.setContentType("octets/stream");
+                response.setHeader("Content-Disposition", "attachment;filename=\"" + filename + "\"");
+                /*int len = 0;
+                // 每次写出 4MB
+                byte[] b = new byte[OUTPUT_SIZE];
+                InputStream inputStream = downloadFileInfos[0].getInput();
+                while ((len = inputStream.read(b)) != -1) {
+                    byteArrayOutputStream.write(b, 0, len);
+                }*/
+                byteArrayOutputStream = downloadFileInfos[0].getByteArrayOutputStream();
+            } else if (index > 1) {
+                SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMddHHmmss_SSSSS");
+                String dateString = simpleDateFormat.format(new Date());
+                String fileName = URLDecoder.decode(name) + ".zip";
+//                logger.debug(fileName);
+                fileName = new String(fileName.getBytes("gb2312"), "ISO8859-1");
+                response.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
+
+                // 将输入流数组压缩包写入字节数组
+                ZipOutputStream zipOutputStream = new ZipOutputStream(byteArrayOutputStream);
+                for (int i = 0; i < downloadFileInfos.length && downloadFileInfos[i] != null; i++) {
+                    String downloadFileName = downloadFileInfos[i].getFileName(); // new
+                    // String(downloadFileInfos[i].getFileName().getBytes(CHARACTER_GB2312),
+                    // "UTF-8");
+                    // 更改文件名，避免同名文件在解压缩时被覆盖
+                    downloadFileName = (i + 1) + "_" + downloadFileName;
+//                    logger.debug(fileName + "(" + i + ") ==> " + downloadFileName);
+                    zipOutputStream.putNextEntry(new ZipEntry(downloadFileName));
+                    int len;
+                    // 每次写出4M
+                    byte[] b = new byte[4096];
+//                    InputStream inputStream = downloadFileInfos[i].getInput();
+                    InputStream inputStream = new ByteArrayInputStream(downloadFileInfos[i].getByteArrayOutputStream().toByteArray());
+                    while ((len = inputStream.read(b)) != -1) {
+                        zipOutputStream.write(b, 0, len);
+
+                    }
+                    zipOutputStream.closeEntry();
+                }
+                zipOutputStream.setEncoding("GBK");
+                zipOutputStream.close();
+            }
+            byte[] ba = byteArrayOutputStream.toByteArray();
+            if (ba != null) {
+                servletOutputStream.write(ba);
+            }
+            servletOutputStream.flush();
+            byteArrayOutputStream.close();
+            servletOutputStream.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    //数据查询  查看
+    @RequestMapping(value = "/deductController.do", params = "method=showReportData")
+    public String showReportData(HttpServletRequest request, HttpServletResponse response, String attachmentid, String type,String pageid) throws UIException {
+//        String tempHTML = null;
+      String  tempHTML =deductService.excelToPageWeight(attachmentid);
+//        String tempHTML = deductService.excelToHtmlByID(pageid);
+        request.setAttribute("tempHTML", tempHTML);
+        request.setAttribute("type", "aaa");
+        request.setAttribute("objectId", attachmentid);
+        return "forward:base/page/deductExcelShow.jsp";
+    }
+
+    //初始化集团扣分统计界面
+    @RequestMapping(value = "/deductController.do",params = "method=initAnalysis")
+    @ResponseBody
+    public  ModelAndView initAnalysis(HttpServletResponse response,HttpServletRequest request) throws UIException{
+//        try {
+//            request.setAttribute("tempList", eemCommonService.findTempList("report", getUserEntity(request)));
+            request.setAttribute("yearStr", String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));
+//        } catch (ServiceException e) {
+//            e.printStackTrace();
+//        }
+        return new ModelAndView(new InternalResourceView("/base/page/deductAnalysis.jsp"));
+    }
+
+    //初始化集团扣分alldown
+    @RequestMapping(value = "/deductController.do",params = "method=initQueryDataAll")
+    @ResponseBody
+    public  ModelAndView initQueryDataAll(HttpServletResponse response,HttpServletRequest request) throws UIException{
+//        try {
+//            request.setAttribute("tempList", eemCommonService.findTempList("report", getUserEntity(request)));
+        request.setAttribute("yearStr", String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));
+//        } catch (ServiceException e) {
+//            e.printStackTrace();
+//        }
+        return new ModelAndView(new InternalResourceView("/base/page/deductDataAll.jsp"));
+    }
+
+
+    /**
+     * 扣分统计
+     *
+     * @param response
+     * @param request
+     * @throws UIException
+     */
+    @RequestMapping(value = "/deductController.do", params = "method=countAnalysis")
+    @ResponseBody
+    public void countAnalysis(HttpServletResponse response, HttpServletRequest request) throws UIException {
+        try {
+            Pager pager = PagerPropertyUtils.copy(request.getParameter("dtGridPager"));
+            pager = deductService.countAnalysis(pager, getUserEntity(request));
+            SerializeConfig ser = new SerializeConfig();
+            ser.put(Timestamp.class, new SimpleDateFormatSerializer("yyyy-MM-dd HH:mm:ss"));
+            endHandle(request, response, JSON.toJSONString(pager, ser, SerializerFeature.WriteNullListAsEmpty), "countAnalysis");
+        } catch (Exception e) {
+            throw new UIException("countAnalysis", e);
+        }
+    }
+
+
+
+    @RequestMapping(value = "/deductController.do", params = "method=allDownload")
+    @ResponseBody
+    public void allDownload(HttpServletRequest request, HttpServletResponse response,String reportYear,String reportData) throws UIException {
+        try {
+           String attIds = deductService.findAttIds(reportYear,URLDecoder.decode(reportData));
+//            download(request,response,attIds,reportYear+URLDecoder.decode(reportData+"集团扣分公示数据"));
+            JSONObject jsonObject = new JSONObject();
+            if(StringUtils.isBlank(attIds)){
+                jsonObject.put("success",false);
+            }else
+                jsonObject.put("success",true);
+
+            jsonObject.put("attIds",attIds);
+            endHandle(request,response,jsonObject,"");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    @RequestMapping(value = "/deductController.do", params = "method=saveAutoReport")
+    @ResponseBody
+    public void saveAutoReport(HttpServletRequest request, HttpServletResponse response) throws UIException {
+        try {
+          autoReport.saveJob();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+}

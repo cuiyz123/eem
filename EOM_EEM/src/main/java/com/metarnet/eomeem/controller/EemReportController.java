@@ -1,0 +1,308 @@
+package com.metarnet.eomeem.controller;
+
+
+import com.alibaba.fastjson.JSONObject;
+import com.metarnet.core.common.adapter.FileAdapter;
+import com.metarnet.core.common.controller.BaseController;
+import com.metarnet.core.common.exception.ServiceException;
+import com.metarnet.core.common.exception.UIException;
+import com.metarnet.core.common.model.DownloadFileInfo;
+import com.metarnet.core.common.model.TEomAttachmentRelProc;
+import com.metarnet.eomeem.model.EemTempEntity;
+import com.metarnet.eomeem.model.ExcelPage;
+import com.metarnet.eomeem.service.IEemCommonService;
+import com.metarnet.eomeem.service.IEemNoticeService;
+import com.metarnet.eomeem.service.IEemReportService;
+import com.ucloud.paas.proxy.aaaa.entity.UserEntity;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.poi.hssf.usermodel.*;
+import org.apache.tools.zip.ZipEntry;
+import org.apache.tools.zip.ZipOutputStream;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.view.InternalResourceView;
+
+import javax.annotation.Resource;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.*;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
+@Controller
+public class EemReportController extends BaseController {
+    private static final String CHARACTER_GB2312 = "gb2312";
+
+    private static final String CHARACTER_ISO8859 = "ISO8859-1";
+
+    private static final String DATE_PATTERN = "yyyyMMddHHmmss_SSSSS";
+
+    /**
+     * 最多同时下载500个文件
+     */
+    private static final int MAX_DOWNLOAD_COUNT = 500;
+
+    /**
+     * 每次最多写出4MB
+     */
+    private static final int OUTPUT_SIZE = 4096;
+
+    @Resource
+    private IEemReportService reportService;
+    @Resource
+    private IEemNoticeService eemNoticeService;
+
+    @Resource
+    private IEemCommonService eemCommonService;
+
+
+    //初始化
+    //type 1 表示省份  2表示地市11
+    @RequestMapping(value = "/reportController.do", params = "method=initReport")
+    @ResponseBody
+    public ModelAndView initReport(HttpServletRequest request, HttpServletResponse response,Long type,String nodeID) throws UIException {
+        UserEntity userEntity = getUserEntity(request);
+        // 添加   jw 4.16   总部的上报功能  
+        String tempIds="";
+        if (userEntity.getUserName().equals("root-zb")){
+            tempIds="0";
+        }else{
+       tempIds = eemCommonService.findTempIdsByNodeId(userEntity.getUserName(),nodeID);}
+//jw
+     //  String tempIds = eemCommonService.findTempIdsByNodeId(userEntity.getUserName(),nodeID);
+        request.setAttribute("tempIds", tempIds);
+        ExcelPage excelPage = reportService.initReport(userEntity, request, null);
+        excelPage.setApplyId(type);
+        request.setAttribute("report", excelPage);
+        try {
+            List<EemTempEntity> tempEntityList = eemCommonService.findTempList("report", getUserEntity(request),tempIds);
+            request.setAttribute("tempList",tempEntityList);
+            request.setAttribute("noticeList", eemNoticeService.findNoticeList(userEntity));
+            int month = Calendar.getInstance().get(Calendar.MONTH)+1;
+            if(month>6){
+                request.setAttribute("yearStr", String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));
+            }else
+            request.setAttribute("yearStr", String.valueOf(Calendar.getInstance().get(Calendar.YEAR)-1));
+        } catch (ServiceException e) {
+            e.printStackTrace();
+        }
+        return new ModelAndView(new InternalResourceView("/base/page/reportData.jsp"));
+    }
+
+
+
+    @RequestMapping(value = "/reportController.do", params = "method=applyReportWithdraw")
+    @ResponseBody
+    public ModelAndView applyReportWithdraw (HttpServletRequest request, HttpServletResponse response,Long type,String nodeID) throws UIException {
+        UserEntity userEntity = getUserEntity(request);
+        ExcelPage excelPage = reportService.initReport(userEntity, request, null);
+        excelPage.setApplyId(type);
+        request.setAttribute("report", excelPage);
+        try {
+            String tempIds = eemCommonService.findTempIdsByNodeId(userEntity.getUserName(),nodeID);
+            request.setAttribute("tempIds", tempIds);
+            List<EemTempEntity> tempEntityList = eemCommonService.findTempList("report", getUserEntity(request),tempIds);
+            request.setAttribute("tempList",tempEntityList);
+            request.setAttribute("noticeList", eemNoticeService.findNoticeList(userEntity));
+            int month = Calendar.getInstance().get(Calendar.MONTH)+1;
+            if(month>6){
+                request.setAttribute("yearStr", String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));
+            }else
+                request.setAttribute("yearStr", String.valueOf(Calendar.getInstance().get(Calendar.YEAR)-1));
+        } catch (ServiceException e) {
+            e.printStackTrace();
+        }
+        return new ModelAndView(new InternalResourceView("/base/page/reportDataApply.jsp"));
+    }
+
+
+
+
+
+    @RequestMapping(value = "/reportController.do", params = "method=excelToPage")
+    @ResponseBody
+    public void excelToPage(HttpServletRequest request, HttpServletResponse response) throws UIException {
+        MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
+        MultipartFile file = multipartRequest.getFile("excelData");
+        String result = reportService.excelToPage(file);
+        endHandle(request, response, result, this.getClass().getName() + "uploaded successfully!");
+
+    }
+
+    //数据查询  下载
+    @RequestMapping(value = "/reportController.do", params = "method=downReportData")
+    public void downReportData(HttpServletRequest request, HttpServletResponse response, String objectId) throws UIException {
+        try {
+            ExcelPage excelPage = reportService.getExcelPage(Long.parseLong(objectId));
+//            HSSFWorkbook workbook = reportService.downReportData(objectId);
+            TEomAttachmentRelProc attachmentRelProc = new TEomAttachmentRelProc();
+            attachmentRelProc.setAttachmentId(excelPage.getAttachmentId());
+            attachmentRelProc.setAttachmentName(excelPage.getOperOrgName()+"-"+excelPage.getFileName()+".xls");
+            List<TEomAttachmentRelProc> dataList = new ArrayList<TEomAttachmentRelProc>();
+            dataList.add(attachmentRelProc);
+            downloadFiles(dataList,response,1);
+           /* String fileName = "";
+            fileName = com.metarnet.eomeem.utils.StringUtils.toUtf8String(request.getHeader("User-Agent"), excelPage.getOperOrgName() + "_" + excelPage.getTpInputName());
+            response.setContentType("application/x-msdownload");
+            response.addHeader("Content-Disposition", "attachment; filename="
+                    + fileName + ".xls");
+
+            OutputStream os = response.getOutputStream();
+            HSSFFormulaEvaluator.evaluateAllFormulaCells(workbook);
+            workbook.write(os);
+            os.flush();
+            os.close();*/
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @RequestMapping(value = "/reportController.do", params = "method=checkReport")
+    @ResponseBody
+    public void checkReport(HttpServletRequest request, HttpServletResponse response, ExcelPage excelPage) throws UIException {
+        boolean flag = true;
+        flag = reportService.checkReport(excelPage, getUserEntity(request));
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("flag", flag);
+        endHandle(request, response, jsonObject, "checkReport");
+    }
+
+    //数据查询  查看
+    @RequestMapping(value = "/reportController.do", params = "method=showReportData")
+    public String showReportData(HttpServletRequest request, HttpServletResponse response, String objectId, String type,
+                                 String yearStr,String tempId,String reportDate) throws UIException {
+        String tempHTML = reportService.excelToHtmlByID(objectId);
+        request.setAttribute("tempHTML", tempHTML);
+        request.setAttribute("type", type);
+//        request.setAttribute("reportDate", request.getParameter("reportDate"));
+//        request.setAttribute("reportDate", request.getParameter("reportDate")==null?"":request.getParameter("reportDate"));
+//        request.setAttribute("provinceCode", request.getParameter("provinceCode")==null?"":request.getParameter("provinceCode"));
+//        request.setAttribute("provinceName", request.getParameter("provinceName")==null?"":request.getParameter("provinceName"));
+        request.setAttribute("yearStr", request.getParameter("yearStr")==null?"":request.getParameter("yearStr"));
+        request.setAttribute("objectId", objectId);
+//        request.setAttribute("yearStr", String.valueOf(Calendar.getInstance().get(Calendar.YEAR)));
+        request.setAttribute("yearStr", yearStr);
+        request.setAttribute("tempId", tempId);
+        request.setAttribute("reportDate", reportDate);
+        return "forward:base/page/reportExcelShow.jsp";
+    }
+
+    //------------------------------------------------------------华丽丽的分割线-----------------------------------------------------
+    @RequestMapping(value = "/reportController.do", params = "method=importReportData")
+    public void importReportData(HttpServletRequest request, HttpServletResponse response, ExcelPage excelPage, String sheetName,String withdraw) throws UIException {
+        UserEntity userEntity = getUserEntity(request);
+        MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
+        MultipartFile file = multipartRequest.getFile("excelData");
+        String msg = "";
+        try {
+            msg = reportService.saveReportData(file.getBytes(), excelPage, sheetName, withdraw,userEntity);
+        } catch (Exception e) {
+            msg = "系统内部运行异常";
+            e.printStackTrace();
+        } finally {
+            JSONObject jsonObject = new JSONObject();
+            if (StringUtils.isBlank(msg)) {
+                jsonObject.put("success", true);
+                jsonObject.put("msg", "导入成功！");
+            } else {
+                jsonObject.put("false", false);
+                jsonObject.put("msg", msg);
+            }
+            endHandle(request, response, jsonObject, "importReportData");
+        }
+    }
+
+    @RequestMapping(value = "/reportController.do", params = "method=checkIsReportedSamePage")
+    public void checkIsReportedSamePage(HttpServletRequest request, HttpServletResponse response, ExcelPage excelPage) throws UIException {
+        JSONObject jsonObject = new JSONObject();
+        String hasPowerToSave = reportService.hasPowerToSave(excelPage, getUserEntity(request));
+        jsonObject.put("msg",hasPowerToSave);
+        endHandle(request, response, jsonObject, "checkIsReportedSamePage");
+    }
+
+
+    /**
+     * 省份用户向总部提出上报数据撤回申请的方法
+     * @param request
+     * @param response
+     * @param excelPage
+     * @throws UIException
+     */
+    @RequestMapping(value = "/reportController.do", params = "method=applyWithdraw")
+    public void applyWithdraw(HttpServletRequest request, HttpServletResponse response, ExcelPage excelPage) throws UIException {
+        JSONObject jsonObject = new JSONObject();
+        /**
+         * 首先判断选择的模板与上报模板是否一致
+         */
+        UserEntity userEntity = getUserEntity(request);
+        MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
+        MultipartFile file = multipartRequest.getFile("excelData");
+        String msg = "";
+        try {
+            msg = reportService.saveReportData(file.getBytes(), excelPage,userEntity);
+        } catch (Exception e) {
+            msg = "系统内部运行异常";
+            e.printStackTrace();
+        } finally {
+            if (StringUtils.isBlank(msg)) {
+                jsonObject.put("success", true);
+                jsonObject.put("msg", "导入成功！");
+            } else {
+                jsonObject.put("false", false);
+                jsonObject.put("msg", msg);
+            }
+            endHandle(request, response, jsonObject, "importReportData");
+        }
+    }
+
+
+
+    @RequestMapping(value = "/reportController.do", params = "method=checkIsReportedSamePage2")
+    public void checkIsReportedSamePage2(HttpServletRequest request, HttpServletResponse response, ExcelPage excelPage) throws UIException {
+        JSONObject jsonObject = new JSONObject();
+        String hasPowerToSave = reportService.hasPowerToSave2(excelPage, getUserEntity(request));
+
+        jsonObject.put("msg",hasPowerToSave);
+        endHandle(request, response, jsonObject, "checkIsReportedSamePage2");
+    }
+
+    @RequestMapping(value = "/reportController.do", params = "method=allDownReportData")
+    public void allDownReportData(HttpServletRequest request, HttpServletResponse response, String eid) throws UIException {
+        try {
+            String ids [] = eid.split(",");
+            List<TEomAttachmentRelProc> dataList = new ArrayList<TEomAttachmentRelProc>();
+            for(String str:ids){
+            ExcelPage excelPage = reportService.getExcelPage(Long.parseLong(str));
+//            HSSFWorkbook workbook = reportService.downReportData(objectId);
+            TEomAttachmentRelProc attachmentRelProc = new TEomAttachmentRelProc();
+            attachmentRelProc.setAttachmentId(excelPage.getAttachmentId());
+            attachmentRelProc.setAttachmentName(excelPage.getOperOrgName()+"-"+excelPage.getFileName()+".xls");
+
+            dataList.add(attachmentRelProc);
+            }
+            downloadFiles(dataList,response,1);
+           /* String fileName = "";
+            fileName = com.metarnet.eomeem.utils.StringUtils.toUtf8String(request.getHeader("User-Agent"), excelPage.getOperOrgName() + "_" + excelPage.getTpInputName());
+            response.setContentType("application/x-msdownload");
+            response.addHeader("Content-Disposition", "attachment; filename="
+                    + fileName + ".xls");
+
+            OutputStream os = response.getOutputStream();
+            HSSFFormulaEvaluator.evaluateAllFormulaCells(workbook);
+            workbook.write(os);
+            os.flush();
+            os.close();*/
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}

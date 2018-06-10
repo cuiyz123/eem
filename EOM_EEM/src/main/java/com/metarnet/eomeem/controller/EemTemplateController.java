@@ -1,0 +1,416 @@
+package com.metarnet.eomeem.controller;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.serializer.SerializeConfig;
+import com.alibaba.fastjson.serializer.SerializerFeature;
+import com.alibaba.fastjson.serializer.SimpleDateFormatSerializer;
+import com.metarnet.core.common.controller.BaseController;
+import com.metarnet.core.common.exception.ServiceException;
+import com.metarnet.core.common.exception.UIException;
+import com.metarnet.core.common.model.Pager;
+import com.metarnet.core.common.utils.PagerPropertyUtils;
+import com.metarnet.eomeem.model.EemTempEntity;
+import com.metarnet.eomeem.model.ReportEntity;
+import com.metarnet.eomeem.service.IEemCommonService;
+import com.metarnet.eomeem.service.IEemTemplateService;
+import com.metarnet.eomeem.utils.EemConstants;
+import com.ucloud.paas.proxy.aaaa.entity.UserEntity;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.tools.zip.ZipEntry;
+import org.apache.tools.zip.ZipOutputStream;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.view.InternalResourceView;
+
+import javax.annotation.Resource;
+import javax.servlet.ServletException;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.*;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Created by Administrator on 2016/6/2.
+ */
+@Controller
+public class EemTemplateController extends BaseController {
+    @Resource
+    private IEemTemplateService eemTemplateService;
+    @Resource
+    private IEemCommonService eemCommonService;
+    private static final int OUTPUT_SIZE = 4096;
+    private static final String CHARACTER_GB2312 = "gb2312";
+
+    private static final String CHARACTER_ISO8859 = "ISO8859-1";
+
+    @RequestMapping(value = "/eemTemplateController.do", params = "method=initTempPage")
+    @ResponseBody
+    public ModelAndView initTempPage(HttpServletRequest request, HttpServletResponse response,String nodeID) throws UIException {
+        try {
+            request.setAttribute("tempList", eemCommonService.findTempList("sum", getUserEntity(request),"1"));
+            UserEntity userEntity =getUserEntity(request);
+            if(userEntity.getCategory().equals("UNI")||userEntity.getUserName().equals("root")){
+                request.setAttribute("type",1);
+            }else if(userEntity.getCategory().equals("PRO")){
+                request.setAttribute("type",3);
+            } else {
+                request.setAttribute("type",3);
+            }
+        } catch (ServiceException e) {
+            e.printStackTrace();
+        }
+        return new ModelAndView(new InternalResourceView("/base/page/tempManager.jsp"));
+    }
+
+
+    @RequestMapping(value = "/eemTemplateController.do", params = "method=queryTemplateList")
+    @ResponseBody
+    public void queryTemplateList(HttpServletResponse response, HttpServletRequest request) throws UIException {
+        try {
+            Pager pager = PagerPropertyUtils.copy(request.getParameter("dtGridPager"));
+            UserEntity userEntity =getUserEntity(request);
+            if(userEntity.getCategory().equals("UNI")||userEntity.getUserName().equals("root")){
+                    request.setAttribute("type",1);
+            }else if(userEntity.getCategory().equals("PRO")){
+                request.setAttribute("type",3);
+            } else {
+                request.setAttribute("type",3);
+            }
+            pager = eemTemplateService.queryTemplateList(pager, getUserEntity(request));
+            SerializeConfig ser = new SerializeConfig();
+            ser.put(Timestamp.class, new SimpleDateFormatSerializer("yyyy-MM-dd HH:mm:ss"));
+            endHandle(request, response, JSON.toJSONString(pager, ser, SerializerFeature.WriteNullListAsEmpty), "queryTemplateList");
+        } catch (Exception e) {
+            throw new UIException("queryTemplateList", e);
+        }
+    }
+
+
+    @RequestMapping(value = "/eemTemplateController.do", params = "method=uploadFile")
+    @ResponseBody
+    public void saveUploadFiles(HttpServletResponse response, HttpServletRequest request, EemTempEntity eemTempEntity, Long relID) throws UIException {
+        MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
+        try {
+            String result = eemTemplateService.saveUploadFiles(eemTempEntity, multipartRequest, getUserEntity(request), relID);
+            JSONObject jsonObject = new JSONObject();
+            if (StringUtils.isBlank(result)) {
+                jsonObject.put("success", true);
+            } else {
+                jsonObject.put("success", false);
+                jsonObject.put("msg", result);
+            }
+            endHandle(request, response, jsonObject.toJSONString(), "saveUploadFiles");
+        } catch (ServiceException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @RequestMapping(value = "/eemTemplateController.do", params = "method=deleteTemp")
+    @ResponseBody
+    public void deleteTemp(HttpServletResponse response, HttpServletRequest request, Long objectID) throws UIException {
+        try {
+            eemTemplateService.deleteTemp(objectID, getUserEntity(request));
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("success", true);
+            endHandle(request, response, jsonObject.toJSONString(), "deleteTemp");
+        } catch (ServiceException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @RequestMapping(value = "/eemTemplateController.do", params = "method=updateRel")
+    @ResponseBody
+    public void updateRel(HttpServletResponse response, HttpServletRequest request, Long tempID, Long relTempID) throws UIException {
+        try {
+            eemTemplateService.updateRel(tempID, relTempID, getUserEntity(request));
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("success", true);
+            endHandle(request, response, jsonObject.toJSONString(), "updateRel");
+        } catch (ServiceException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @RequestMapping(value = "/eemTemplateController.do", params = "method=downFile")
+    public ModelAndView downFile(HttpServletRequest request, HttpServletResponse response, Long objectID) throws Exception {
+        String contentType = "application/octet-stream";
+        EemTempEntity eemTempEntity = eemTemplateService.findTempByID(objectID);
+        download(request, response, eemTempEntity.getRelativePath(), contentType, eemTempEntity.getTempName() + "." + eemTempEntity.getSuffix());
+        return null;
+    }
+
+    protected void download(HttpServletRequest request, HttpServletResponse response,
+                            String storeName, String contentType, String fileName) throws Exception {
+
+        request.setCharacterEncoding("UTF-8");
+        BufferedInputStream bis = null;
+        BufferedOutputStream bos = null;
+
+        //获取下载文件露肩
+        //平平
+        String downLoadPath = EemConstants.RELATIVE_PATH + File.separator + storeName;
+
+        //获取文件的长度
+        long fileLength = new File(downLoadPath).length();
+
+        String userAgent = request.getHeader("User-Agent");
+        //针对IE或者以IE为内核的浏览器：
+        System.out.println(fileName+"----------------------downLoadPath:"+downLoadPath);
+        if (userAgent.contains("MSIE") || userAgent.contains("Trident")) {
+            fileName = java.net.URLEncoder.encode(fileName, "UTF-8");
+        } else {
+            //非IE浏览器的处理：
+            fileName = new String(fileName.getBytes("UTF-8"), "ISO-8859-1");
+        }
+
+        //设置文件输出类型
+        response.setContentType("application/octet-stream");
+        response.setHeader("Content-disposition", "attachment; filename="
+                + fileName);
+
+        //设置输出长度
+        response.setHeader("Content-Length", String.valueOf(fileLength));
+        //获取输入流
+        bis = new BufferedInputStream(new FileInputStream(downLoadPath));
+        //输出流
+        bos = new BufferedOutputStream(response.getOutputStream());
+        byte[] buff = new byte[2048];
+        int bytesRead;
+        while (-1 != (bytesRead = bis.read(buff, 0, buff.length))) {
+            bos.write(buff, 0, bytesRead);
+        }
+        //关闭流
+        bis.close();
+        bos.close();
+    }
+
+    /**
+     * 批量打包下载文件生成zip文件下载
+     *
+     * @param request
+     * @param response
+     * @return
+     * @throws ServletException
+     * @throws IOException
+     */
+    @RequestMapping(value = "/eemTemplateController.do", params = "method=downloadZip")
+    public String downloadFiles(HttpServletRequest request, HttpServletResponse response,int type) {
+        List<File> files = new ArrayList<File>();
+        List<EemTempEntity> eemTempEntityList = new ArrayList<EemTempEntity>();
+        try {
+            ServletOutputStream servletOutputStream = response.getOutputStream();
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            String fileName = "上报模板打包下载.zip";
+            if(type==3){
+                eemTempEntityList = eemTemplateService.findAllTempEntity("deduct");
+                fileName = "扣分模板打包下载.zip";
+            }else if(type==2){
+                eemTempEntityList = eemTemplateService.findAllTempEntity("sum");
+                fileName = "汇总模板打包下载.zip";
+            }else {
+                eemTempEntityList = eemTemplateService.findAllTempEntity("report");
+            }
+
+            for (EemTempEntity eEemTempEntity : eemTempEntityList) {
+                File file = new File(EemConstants.RELATIVE_PATH + File.separator + eEemTempEntity.getRelativePath());
+                files.add(file);
+            }
+
+            //在服务器端创建打包下载的临时文件
+            fileName = new String(fileName.getBytes(CHARACTER_GB2312), CHARACTER_ISO8859);
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
+            //压缩流
+            ZipOutputStream toClient = new ZipOutputStream(byteArrayOutputStream);
+            for (int i = 0; i < files.size(); i++) {
+                String downloadFileName = files.get(i).getName(); // new
+                downloadFileName = (i + 1) + "_" + downloadFileName;
+                toClient.putNextEntry(new ZipEntry(downloadFileName));
+                int len;
+                // 每次写出4M
+                byte[] b = new byte[OUTPUT_SIZE];
+                InputStream inputStream = new FileInputStream(files.get(i));
+                while ((len = inputStream.read(b)) != -1) {
+                    toClient.write(b, 0, len);
+                }
+                toClient.closeEntry();
+            }
+            toClient.setEncoding("GBK");
+            toClient.close();
+            byte[] ba = byteArrayOutputStream.toByteArray();
+            if (ba != null) {
+                servletOutputStream.write(ba);
+            }
+            servletOutputStream.flush();
+            byteArrayOutputStream.close();
+            servletOutputStream.close();
+        } catch (ServiceException e) {
+            e.printStackTrace();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @RequestMapping(value = "/eemTemplateController.do", params = "method=downLoadDescription")
+    public void downLoadDescription(HttpServletRequest request,HttpServletResponse response){
+
+        InputStream  in = this.getClass().getClassLoader().getResourceAsStream("后评价.docx");
+        try {
+            String fileName = "中国联通OSS2.0电子运维系统用户手册-设备后评价分册";//获取要下载的文件名
+//            fileName = toUtf8String(request.getHeader("User-Agent"), fileName);
+            fileName = new String(fileName.getBytes(CHARACTER_GB2312), CHARACTER_ISO8859);
+            response.setHeader("content-disposition", "attachment;filename="+fileName+".docx");
+            int len = 0;
+            byte[] buffer = new byte[1024];
+            OutputStream out = response.getOutputStream();
+            while ((len = in.read(buffer)) > 0) {
+                out.write(buffer,0,len);//将缓冲区的数据输出到客户端浏览器
+            }
+            in.close();
+            out.flush();
+            out.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+    }
+
+
+    /**
+     * 下载文件
+     *
+     * @param file
+     * @param response
+     */
+    public void downloadFile(HttpServletRequest request,HttpServletResponse response,File file,  boolean isDelete) {
+        try {
+            // 以流的形式下载文件。
+            BufferedInputStream fis = new BufferedInputStream(new FileInputStream(file.getPath()));
+            byte[] buffer = new byte[fis.available()];
+            fis.read(buffer);
+            fis.close();
+            // 清空response
+            response.reset();
+            String userAgent = request.getHeader("User-Agent");
+            String fileName = file.getName();
+            //针对IE或者以IE为内核的浏览器：
+            if (userAgent.contains("MSIE") || userAgent.contains("Trident")) {
+                fileName = java.net.URLEncoder.encode(fileName, "UTF-8");
+            } else {
+                //非IE浏览器的处理：
+                fileName = new String(fileName.getBytes("UTF-8"), "ISO-8859-1");
+            }
+            OutputStream toClient = new BufferedOutputStream(response.getOutputStream());
+            response.setContentType("application/octet-stream");
+            response.setHeader("Content-Disposition", "attachment;filename=" + fileName);
+            toClient.write(buffer);
+            toClient.flush();
+            toClient.close();
+            if (isDelete) {
+                file.delete();        //是否将生成的服务器端文件删除
+            }
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    //报表与厂商关系维护
+    @RequestMapping(value = "/eemTemplateController.do", params = "method=queryReportList")
+    @ResponseBody
+    public ModelAndView queryReportList(HttpServletResponse response, HttpServletRequest request) throws UIException {
+        try {
+            List<ReportEntity> reportEntityList = eemCommonService.reportTempList("report", getUserEntity(request));
+            request.setAttribute("tempList",reportEntityList);
+
+        } catch (ServiceException e) {
+            e.printStackTrace();
+        }
+        return new ModelAndView(new InternalResourceView("/base/page/vendorReportManager.jsp"));
+
+    }
+
+    //厂商设备关系------添加报表
+    @RequestMapping(value = "/eemTemplateController.do", params = "method=saveReport")
+    @ResponseBody
+    public void saveUploadFiles(HttpServletResponse response, HttpServletRequest request, ReportEntity reportEntity) throws UIException {
+        try {
+            String result = eemTemplateService.saveUploadFiles(reportEntity, getUserEntity(request));
+            JSONObject jsonObject = new JSONObject();
+            if (StringUtils.isBlank(result)) {
+                jsonObject.put("success", true);
+            } else {
+                jsonObject.put("success", false);
+                jsonObject.put("msg", result);
+            }
+            endHandle(request, response, jsonObject, "saveReport");
+        } catch (ServiceException e) {
+            e.printStackTrace();
+        }
+    }
+//得到添加报表里的报表列表
+    @RequestMapping(value = "/eemTemplateController.do", params = "method=initAdd")
+    @ResponseBody
+    public ModelAndView initAdd(HttpServletRequest request, HttpServletResponse response,String type) throws UIException {
+        try {
+            List<EemTempEntity> tempEntityList = eemCommonService.findTempListToDevice("report", getUserEntity(request));
+            String  venders  = eemCommonService.findVenders(type, getUserEntity(request));
+            request.setAttribute("tempList",tempEntityList);
+            request.setAttribute("type",type);
+            request.setAttribute("venders",venders);
+        } catch (ServiceException e) {
+            e.printStackTrace();
+        }
+        return new ModelAndView(new InternalResourceView("/base/page/vendorReportManager.jsp"));
+    }
+
+//查询厂商类型
+    @RequestMapping(value = "/eemTemplateController.do", params = "method=findVendorList")
+    @ResponseBody
+    public void findDeviceList(Integer vendorId,String vendorName,String type, HttpServletRequest request, HttpServletResponse response) throws UIException {
+        try {
+            List result = eemCommonService.queryDevice(vendorId,vendorName,type);
+            JSONObject jsonObject = new JSONObject();
+            if (result!=null&&result.size()>0) {
+                jsonObject.put("success", true);
+                jsonObject.put("msg", result);
+            } else {
+                jsonObject.put("success", false);
+
+            }
+            endHandle(request, response, JSON.toJSONString(jsonObject,SerializerFeature.WriteNullListAsEmpty), "findVendorList");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    //查询设备类型
+  /* @RequestMapping(value = "/eemTemplateController.do", params = "method=findSheetList")
+   @ResponseBody
+   public void findSheetList(Long id,String sheetName,String type, HttpServletRequest request, HttpServletResponse response) throws UIException {
+       try {
+           List result = eemCommonService.querySheet(id, sheetName,type);
+           JSONObject jsonObject = new JSONObject();
+           if (result!=null&&result.size()>0) {
+               jsonObject.put("success", true);
+               jsonObject.put("msg", result);
+           } else {
+               jsonObject.put("success", false);
+
+           }
+           endHandle(request, response, JSON.toJSONString(jsonObject,SerializerFeature.WriteNullListAsEmpty), "findSheetList");
+       } catch (Exception e) {
+           e.printStackTrace();
+       }
+   }
+*/
+}

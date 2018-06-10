@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="war" name="EOM_EEM:war">
+    <output-path>$PROJECT_DIR$/target</output-path>
+    <root id="archive" name="eom_eem-1.0-SNAPSHOT.war">
+      <element id="artifact" artifact-name="EOM_EEM:war exploded" />
+    </root>
+  </artifact>
+</component>

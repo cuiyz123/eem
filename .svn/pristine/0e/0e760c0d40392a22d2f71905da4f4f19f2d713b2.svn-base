@@ -1,0 +1,114 @@
+package com.metarnet.eomeem.model;
+
+
+import javax.persistence.*;
+import java.sql.Timestamp;
+
+
+@Entity
+@Table(name = "t_eem_apply")
+public class EemApply extends BaseEntity {
+
+    private String tpInputName;
+
+    private Long tpInputID;//模板id
+    private String pageName;//上报的页面的名称
+    private String reportUserName;//上报人的用户名
+    private String reportOrgCode;//上报的部门
+    private String reportOrgName;//上报的部门
+    private String reportDate;//上报的时间   年度 、半年、季度（第几季度）
+    private String reportYear;//上报年份
+    private String desc;
+    private Long pageId;
+
+    private Timestamp autidTime;
+
+    public String getTpInputName() {
+        return tpInputName;
+    }
+
+    public void setTpInputName(String tpInputName) {
+        this.tpInputName = tpInputName;
+    }
+
+    public Long getTpInputID() {
+        return tpInputID;
+    }
+
+    public void setTpInputID(Long tpInputID) {
+        this.tpInputID = tpInputID;
+    }
+
+    @Column(name = "Page_Name")
+    public String getPageName() {
+        return pageName;
+    }
+
+    public void setPageName(String pageName) {
+        this.pageName = pageName;
+    }
+
+    public String getReportUserName() {
+        return reportUserName;
+    }
+
+    public void setReportUserName(String reportUserName) {
+        this.reportUserName = reportUserName;
+    }
+
+    public String getReportOrgCode() {
+        return reportOrgCode;
+    }
+
+    public void setReportOrgCode(String reportOrgCode) {
+        this.reportOrgCode = reportOrgCode;
+    }
+
+    public String getReportDate() {
+        return reportDate;
+    }
+
+    public void setReportDate(String reportDate) {
+        this.reportDate = reportDate;
+    }
+
+    public String getReportYear() {
+        return reportYear;
+    }
+
+    public void setReportYear(String reportYear) {
+        this.reportYear = reportYear;
+    }
+
+    public String getDesc() {
+        return desc;
+    }
+
+    public void setDesc(String desc) {
+        this.desc = desc;
+    }
+
+    public Long getPageId() {
+        return pageId;
+    }
+
+    public void setPageId(Long pageId) {
+        this.pageId = pageId;
+    }
+
+    public String getReportOrgName() {
+        return reportOrgName;
+    }
+
+    public void setReportOrgName(String reportOrgName) {
+        this.reportOrgName = reportOrgName;
+    }
+
+    public Timestamp getAutidTime() {
+        return autidTime;
+    }
+
+    public void setAutidTime(Timestamp autidTime) {
+        this.autidTime = autidTime;
+    }
+}

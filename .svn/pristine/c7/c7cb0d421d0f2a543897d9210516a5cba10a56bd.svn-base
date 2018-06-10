@@ -1,0 +1,160 @@
+<%@ page import="com.metarnet.eomeem.model.EemTempEntity" %>
+<%@ page import="java.util.List" %>
+<%@ page import="com.metarnet.eomeem.service.impl.EemCommonServiceImpl" %>
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ include file="/base/basePage.jsp" %>
+<html>
+<head>
+    <title>待办列表</title>
+    <script type="text/javascript">
+        __show_metar_loading();
+        //映射内容
+        var dtGridColumns_2_1_2 = [
+            {
+                id: 'tpInputName',
+                title: '文件名称',
+                type: 'string',
+//                headerStyle: 'width:160px',
+                headerStyle: '15%',
+                columnStyle:'15%',
+                columnClass: 'text-center',
+                resolution: function (value, record, column, grid, dataNo, columnNo) {
+                    return "<a href='javascript:;' onclick='showReportData("+record.objectId+")'>《"+value+"-"+record.operOrgName+"》待审核</a>";
+                }
+            },
+            {
+                id: 'operUserTrueName',
+                title: '上报人',
+                type: 'string',
+//                headerStyle: 'width:100px',
+                headerStyle: '10%',
+                columnStyle:'10%',
+                columnClass: 'text-center'
+            },
+            {
+                id: 'operOrgName',
+                title: '上报人部门',
+                headerStyle: '15%',
+                columnStyle:'15%',
+//                headerStyle: 'width:120px',
+                type: 'string',
+                columnClass: 'text-center'
+            },
+            {
+                id: 'operUserPhone',
+                title: '电话',
+                type: 'string',
+                headerStyle: '10%',
+                columnStyle:'10%',
+//                headerStyle: 'width:120px',
+                columnClass: 'text-center'
+            },
+            {
+                id: 'dateGrading',
+                title: '统计粒度',
+                headerStyle: '10%',
+                columnStyle:'10%',
+//                headerStyle: 'width:100px',
+                type: 'string',
+                columnClass: 'text-center'
+            },
+            {
+                id: 'creationTime',
+                title: '上报时间',
+                type: 'date',
+                format:'yyyy-MM-dd hh:mm:ss',
+                columnClass: 'text-center' ,
+//                headerStyle: 'width:160px'
+                headerStyle: '15%',
+                columnStyle:'15%'
+            },
+            {
+                id: 'objectId',
+                title: '操作',
+                headerStyle: '15%',
+//                columnStyle:'15%',
+                type: 'string',
+//                headerStyle: 'width:100px',
+                columnClass: 'text-center',
+                resolution: function (value, record, column, grid, dataNo, columnNo) {
+                    return "<a href='javascript:;' onclick='downReportData("+value+")'>下载</a>";
+                }}
+        ];
+        var dtGridOption_2_1_2 = {
+            lang : 'zh-cn',
+            ajaxLoad : true,
+            loadURL: '<%=path%>/eemCommonController.do?method=queryDataList&type=todo',
+            exportFileName : '数据查询列表',
+            columns : dtGridColumns_2_1_2,
+            gridContainer : 'dtGridContainer_2_1_2',
+            toolbarContainer : 'dtGridToolBarContainer_2_1_2',
+            tools:'refresh',
+            pageSize : 10,
+            pageSizeLimit : [10, 20, 50,100]
+        };
+        var grid_2_1_2 = $.fn.DtGrid.init(dtGridOption_2_1_2);
+        $(function () {
+            grid_2_1_2.load(function(){
+                __hide_metar_loading();
+            });
+            $('#custom_search_2_2_3').click(customSearch_2_2_3);
+        });
+        function customSearch_2_2_3(){
+            grid_2_1_2.parameters = new Object();
+            grid_2_1_2.parameters['tempId'] = $('#tempName').val();
+            grid_2_1_2.parameters['year'] = $('#year').val();
+            grid_2_1_2.parameters['reportDate'] = $('#reportDate').val();
+            grid_2_1_2.refresh(true);
+        }
+        function showReportData(objectId){
+            window.location.href = "<%=path%>/reportController.do?method=showReportData&objectId=" + objectId+"&type=todo"+"&yearStr="+${yearStr};
+        }
+        function downReportData(objectId){
+            window.location.href = "<%=path%>/reportController.do?method=downReportData&objectId=" + objectId;
+        }
+    </script>
+</head>
+<body>
+<div class="big-title-metar">待办查询</div>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-xs-1 col-sm-1" style="padding: 0px;padding-left: 15px;">模板名称：</div>
+        <div class="col-xs-4 col-sm-4" style="padding: 0px">
+            <select id="tempName" style="width: 90%">
+                <option value="" selected>-------------------------------</option>
+                <c:forEach items="${tempList}" var="temp">
+                    <option value="${temp.objectId}">${temp.tempName}</option>
+                </c:forEach>
+            </select>
+        </div>
+        <div class="col-xs-1 col-sm-1" style="padding: 0px">粒度：</div>
+        <div class="col-xs-2 col-sm-2" style="padding: 0px">
+            <select id="year" style="width: 45%">
+                <option value="" selected>-------</option>
+                <c:forEach begin="2015" end="${yearStr}" var="y" step="1">
+                    <c:if test="${y eq yearStr}" var="ss">
+                        <option value="${y}" selected="selected">${y}</option>
+                    </c:if>
+                    <c:if test="${!ss}">
+                        <option value="${y}">${y}</option>
+                    </c:if>
+                </c:forEach>
+            </select>
+            <select id="reportDate" style="width: 45%">
+                <option value="" selected>-------</option>
+                <%--<option value="第一季度">第一季度</option>--%>
+                <%--<option value="第二季度">第二季度</option>--%>
+                <%--<option value="第三季度">第三季度</option>--%>
+                <%--<option value="第四季度">第四季度</option>--%>
+                <option value="上半年">上半年</option>
+                <option value="下半年">下半年</option>
+                <%--<option value="全年">全年</option>--%>
+            </select>
+        </div>
+        <div class="btn btn-danger" id="custom_search_2_2_3">查询</div>
+    </div>
+</div>
+<div id="dtGridContainer_2_1_2" class="dt-grid-container div0"></div>
+<div id="dtGridToolBarContainer_2_1_2" class="dt-grid-toolbar-container"></div>
+</body>
+</html>

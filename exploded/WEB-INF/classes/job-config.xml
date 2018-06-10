@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<job-config version="1.0">
+	<info>
+		 <project>电子运维</project>
+		 <author>chenbo</author>
+		 <date>2005-4-22</date>
+	</info>
+	<job-definition>
+		<input-prompt begin="##" end="#"/>
+		<input-types>
+			<input type="text" class="com.metarnet.eomeem.utils.excel.TextInputElement">
+			  <props>
+			    <prop key="maxlength">20</prop>
+			    <prop key="size"></prop>
+			    <prop key="value">请输入</prop>
+			    <prop key="class">dd</prop>
+			    <prop key="filter"></prop>
+			    <prop key="ismust"></prop>
+			    <prop key="autoweek"></prop>
+			    <prop key="validtype"></prop>
+			    <prop key="curInstName"></prop>
+			    <prop key="nextInstName"></prop>
+			    <prop>readonly</prop>
+			  </props> 
+			</input>
+            <input type="SQL" class="com.metarnet.eomeem.utils.excel.TextInputElement">
+                <props>
+                    <prop key="maxlength">20</prop>
+                    <prop key="size"></prop>
+                    <prop key="value">请输入</prop>
+                    <prop key="class">dd</prop>
+                    <prop key="filter"></prop>
+                    <prop key="ismust"></prop>
+                    <prop key="autoweek"></prop>
+                    <prop key="validtype"></prop>
+                    <prop key="curInstName"></prop>
+                    <prop key="nextInstName"></prop>
+                    <prop>readonly</prop>
+                </props>
+            </input>
+			<input type="password" class="com.metarnet.eomeem.utils.excel.PasswordInputElement">
+			  <props>
+			    <prop key="maxlength">20</prop>
+			    <prop key="size">10</prop>
+			    <prop key="value">请输入</prop>
+			    <prop key="class">dd</prop>
+			    <prop key="filter"></prop>
+			    <prop key="ismust"></prop>
+			    <prop>readonly</prop>
+			  </props>
+			</input>
+			<input type="textarea" class="com.metarnet.eomeem.utils.excel.TextareaInputElement">
+			  <props>
+			    <prop key="rows">5</prop>
+			    <prop key="cols">10</prop>
+			    <prop key="value">请输入</prop>
+			    <prop key="class">dd</prop>
+			    <prop key="filter"></prop>
+			    <prop key="ismust"></prop>
+			    <prop>readonly</prop>
+			  </props>
+			</input>
+			<input type="checkbox" class="com.metarnet.eomeem.utils.excel.CheckBoxInputElement">
+			  <props>
+			    <prop key="class">dd</prop>
+			    <prop key="filter"></prop>
+			    <prop>checked</prop>
+			    <prop>disabled</prop>
+			  </props>
+			</input>
+			<input type="select" class="com.metarnet.eomeem.utils.excel.SelectInputElement">
+			  <props>
+			    <prop key="class">dd</prop>
+			    <prop key="options"></prop>
+			    <prop key="values"></prop>
+<!-- 
+			    <prop key="selected"></prop>
+-->
+			    <prop key="value"></prop>
+			    <prop key="filter"></prop>
+			    <prop>multiple</prop>
+			    <prop key="size">1</prop>
+			    <prop key="ismust"></prop>
+			    <prop key="onChange"></prop>
+			    <prop key="autoweek"></prop>
+			    <prop>disabled</prop>
+			  </props>
+			</input>
+			<input type="hidden" class="com.metarnet.eomeem.utils.excel.HiddenInputElement">
+			  <props>
+			    <prop key="name">city</prop>
+			    <prop key="value">HZ</prop>
+			  </props>
+			</input>
+			<input type="file" class="com.metarnet.eomeem.utils.excel.FileInputElement">
+			  <props>
+			    <prop key="class">dd</prop>
+			    <prop key="size">50</prop>
+			    <prop key="filter"></prop>
+			    <prop key="ismust"></prop>
+			    <prop>readonly</prop>
+			  </props>
+			</input>
+			<input type="date" class="com.metarnet.eomeem.utils.excel.DateInputElement">
+			  <props>
+			    <prop key="class">dd</prop>
+			    <prop key="size">15</prop>
+			    <prop key="value"></prop>
+			    <prop key="ismust"></prop>
+			    <prop key="curHandOutTime"></prop>
+			    <prop key="nextTakingTime"></prop>
+			    <prop key="onClick">Kalendar(this);</prop>
+			    <prop>readonly</prop>
+			  </props>
+			</input>
+			<input type="netelement" class="com.metarnet.eomeem.utils.excel.NetworkElement">
+			  <props>
+			    <prop key="value"></prop>
+			    <prop key="ismust"></prop>
+			    <prop>readonly</prop>
+			  </props>
+			</input>
+		</input-types>
+		<!--   20120327添加 下拉列表 -->
+		<props>
+			<prop name="option">
+				<option key="default">--</option>
+				<option key="江苏通能信息有限公司">江苏通能信息有限公司</option>
+				<option key="山东太平洋光缆有限公司">山东太平洋光缆有限公司</option>
+				<option key="富通集团有限公司">富通集团有限公司</option>
+				<option key="长飞光纤光缆有限公司">长飞光纤光缆有限公司</option>
+				<option key="北京康宁光缆有限公司">北京康宁光缆有限公司</option>
+				<option key="深圳市特发信息股份有限公司">深圳市特发信息股份有限公司</option>
+				<option key="吴江市胜信光电科技有限公司">吴江市胜信光电科技有限公司</option>
+				<option key="江苏长飞中利光纤光缆有限公司">江苏长飞中利光纤光缆有限公司</option>
+				<option key="江苏七宝光电集团有限公司">江苏七宝光电集团有限公司</option>
+				<option key="大连富通光通信技术有限公司">大连富通光通信技术有限公司</option>
+				<option key="江苏亨通光电股份有限公司">江苏亨通光电股份有限公司</option>
+				<option key="沈阳亨通光通信有限公司">沈阳亨通光通信有限公司</option>
+				<option key="江苏通鼎光电股份有限公司">江苏通鼎光电股份有限公司</option>
+				<option key="江苏法尔胜光通有限公司">江苏法尔胜光通有限公司</option>
+				<option key="吉林省吉通电缆有限公司">吉林省吉通电缆有限公司</option>
+				<option key="鲁能泰山曲阜电缆有限公司">鲁能泰山曲阜电缆有限公司</option>
+				<option key="江苏中天科技股份有限公司">江苏中天科技股份有限公司</option>
+				<option key="江苏俊知技术有限公司">江苏俊知技术有限公司</option>
+				<option key="九龙科技集团有限公司">九龙科技集团有限公司</option>
+				<option key="江苏南方通信科技有限公司">江苏南方通信科技有限公司</option>
+				<option key="深圳日海通讯技术股份有限公司">深圳日海通讯技术股份有限公司</option>
+				<option key="湖南神通光电科技有限责任公司">湖南神通光电科技有限责任公司</option>
+				<option key="无锡普睿司曼电缆有限公司">无锡普睿司曼电缆有限公司</option>
+				<option key="浙江富春江光电科技股份有限公司">浙江富春江光电科技股份有限公司</option>
+				<option key="三星（海南）光通信技术有限公司">三星（海南）光通信技术有限公司</option>
+				<option key="成都康宁光缆有限公司">成都康宁光缆有限公司</option>
+				<option key="山东泉兴银桥光电缆科技发展有限公司">山东泉兴银桥光电缆科技发展有限公司</option>
+				<option key="中国普天信息产业股份有限公司">中国普天信息产业股份有限公司</option>
+				<option key="浙江正导光电股份有限公司">浙江正导光电股份有限公司</option>
+				<option key="江西普天数据电缆有限公司">江西普天数据电缆有限公司</option>
+				<option key="长飞光纤光缆（上海）有限公司">长飞光纤光缆（上海）有限公司</option>
+				<option key="安徽电信器材贸易工业有限责任公司">安徽电信器材贸易工业有限责任公司</option>
+				<option key="天津鑫茂科技股份有限公司">天津鑫茂科技股份有限公司</option>
+				<option key="成都大唐线缆有限公司">成都大唐线缆有限公司</option>
+				<option key="无锡市宏达光电有限公司">无锡市宏达光电有限公司</option>
+				<option key="长飞光纤光缆四川有限公司">长飞光纤光缆四川有限公司</option>
+				<option key="汕头高新区奥星光通信设备有限公司">汕头高新区奥星光通信设备有限公司</option>
+				<option key="烽火通信科技股份有限公司">烽火通信科技股份有限公司</option>
+				<option key="珠海汉胜科技股份有限公司">珠海汉胜科技股份有限公司</option>
+				<option key="江苏科信光电科技有限公司">江苏科信光电科技有限公司</option>
+				<option key="深圳市特发信息股份有限公司">深圳市特发信息股份有限公司</option>
+				<option key="湖北凯乐科技股份有限公司">湖北凯乐科技股份有限公司</option>
+				<option key="浙江南方通信集团股份有限公司">浙江南方通信集团股份有限公司</option>
+				<option key="双塔集团吴江特种光电线缆厂">双塔集团吴江特种光电线缆厂</option>
+				<option key="江苏永鼎股份有限公司">江苏永鼎股份有限公司</option>
+				<option key="河南许昌阳光光电线缆有限公司">河南许昌阳光光电线缆有限公司</option>
+				<option key="吴江通信电缆厂">吴江通信电缆厂</option>
+				<option key="特恩驰（南京）光纤有限公司">特恩驰（南京）光纤有限公司</option>
+				<option key="古河电工（西安）光通信有限公司">古河电工（西安）光通信有限公司</option>
+				<option key="宏安集团有限公司">宏安集团有限公司</option>
+				<option key="吴江新南方通信线缆有限公司">吴江新南方通信线缆有限公司</option>
+				<option key="四川九洲线缆有限责任公司">四川九洲线缆有限责任公司</option>
+				<option key="南京烽火藤仓光通信有限公司">南京烽火藤仓光通信有限公司</option>
+				<option key="青岛中能光科通讯有限公司">青岛中能光科通讯有限公司</option>
+				<option key="江苏通鼎光电股份有限公司">江苏通鼎光电股份有限公司</option>
+				<option key="无锡广畅光电股份有限公司">无锡广畅光电股份有限公司</option>
+				<option key="吴江飞乐恒通光纤光缆有限公司">吴江飞乐恒通光纤光缆有限公司</option>
+				<option key="吉林长兴光通信有限公司">吉林长兴光通信有限公司</option>
+				<option key="中联光通信光缆有限公司">中联光通信光缆有限公司</option>
+
+			</prop>
+		</props>
+<!-- 
+		<column>
+		  <props>
+		    <prop>colspan</prop>
+		    <prop>rowspan</prop>
+		    <prop>valign</prop>
+		    <prop>align</prop>
+		    <prop>width</prop>
+		    <prop>height</prop>
+		  </props>
+		</column>
+-->
+	</job-definition>
+</job-config>

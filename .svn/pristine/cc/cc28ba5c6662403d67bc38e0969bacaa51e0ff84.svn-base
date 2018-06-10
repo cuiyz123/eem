@@ -1,0 +1,110 @@
+package com.metarnet.eomeem.utils;
+
+import jxl.format.*;
+import jxl.write.WritableCellFormat;
+import jxl.write.WritableFont;
+import jxl.write.WriteException;
+
+public class ExportUtil {
+	public static WritableCellFormat getTitleFormat(int fontSize) {
+		try {
+			WritableFont font1 = new WritableFont(WritableFont.ARIAL, fontSize,
+					WritableFont.BOLD, false, UnderlineStyle.NO_UNDERLINE,
+					jxl.format.Colour.BLACK);
+			WritableCellFormat titleFormat3 = new WritableCellFormat(font1);
+			titleFormat3.setBackground(Colour.GREY_25_PERCENT);
+			titleFormat3.setAlignment(Alignment.CENTRE);
+			titleFormat3.setVerticalAlignment(VerticalAlignment.CENTRE);
+			titleFormat3.setBorder(Border.ALL, BorderLineStyle.THIN);
+			return titleFormat3;
+		} catch (WriteException e) {
+			return null;
+		}
+	}
+
+	public static WritableCellFormat getTitleFormatForPv(int fontSize) {
+		try {
+			WritableFont font1 = new WritableFont(WritableFont.ARIAL, fontSize,
+					WritableFont.BOLD, false, UnderlineStyle.NO_UNDERLINE,
+					jxl.format.Colour.RED);
+			WritableCellFormat titleFormat3 = new WritableCellFormat(font1);
+			titleFormat3.setBackground(Colour.GREY_25_PERCENT);
+			titleFormat3.setAlignment(Alignment.CENTRE);
+			titleFormat3.setVerticalAlignment(VerticalAlignment.CENTRE);
+			titleFormat3.setBorder(Border.ALL, BorderLineStyle.THIN);
+			return titleFormat3;
+		} catch (WriteException e) {
+			return null;
+		}
+	}
+	public static WritableCellFormat getProvinceFormat(int fontSize) {
+		try {
+			WritableFont font1 = new WritableFont(WritableFont.ARIAL, fontSize,
+					WritableFont.BOLD, false, UnderlineStyle.NO_UNDERLINE,
+					jxl.format.Colour.BLACK);
+			WritableCellFormat titleFormat3 = new WritableCellFormat(font1);
+			titleFormat3.setBackground(Colour.GREY_25_PERCENT);
+			titleFormat3.setAlignment(Alignment.LEFT);
+			titleFormat3.setVerticalAlignment(VerticalAlignment.CENTRE);
+			titleFormat3.setBorder(Border.ALL, BorderLineStyle.THIN);
+			return titleFormat3;
+		} catch (WriteException e) {
+			return null;
+		}
+	}
+
+	public static WritableCellFormat getTitleFormatForZWZY(int fontSize) {
+		try {
+			WritableFont font1 = new WritableFont(WritableFont.ARIAL, fontSize,
+					WritableFont.NO_BOLD, false, UnderlineStyle.NO_UNDERLINE,
+					jxl.format.Colour.BLACK);
+			WritableCellFormat titleFormat3 = new WritableCellFormat(font1);
+		//	titleFormat3.setBackground(Colour.GREY_25_PERCENT);
+			titleFormat3.setAlignment(Alignment.CENTRE);
+			titleFormat3.setVerticalAlignment(VerticalAlignment.CENTRE);
+			titleFormat3.setBorder(Border.ALL, BorderLineStyle.THIN);
+			return titleFormat3;
+		} catch (WriteException e) {
+			return null;
+		}
+	}
+
+	public static WritableCellFormat getTextFormat(int fontSize,String content) {
+		try {
+			WritableFont font2 = new WritableFont(WritableFont.ARIAL, fontSize,
+					WritableFont.NO_BOLD, false, UnderlineStyle.NO_UNDERLINE,
+					jxl.format.Colour.BLACK);
+			WritableCellFormat textFormat = new WritableCellFormat(font2);
+			if("date".equals(content)){
+				textFormat.setAlignment(Alignment.RIGHT);
+			}else{
+				textFormat.setAlignment(Alignment.CENTRE);
+				textFormat.setBackground(Colour.LIGHT_GREEN);
+			}
+			textFormat.setVerticalAlignment(VerticalAlignment.CENTRE);
+			textFormat.setBorder(Border.ALL, BorderLineStyle.THIN);
+			return textFormat;
+		} catch (WriteException e) {
+			return null;
+		}
+	}
+	public static WritableCellFormat getBackfround(jxl.format.Colour c,int fontSize) {
+		try {
+			if(fontSize==0){
+				fontSize=12;
+			}
+			WritableFont font1 = new WritableFont(WritableFont.ARIAL, fontSize,
+					WritableFont.NO_BOLD, false, UnderlineStyle.NO_UNDERLINE,
+					jxl.format.Colour.BLACK);
+			WritableCellFormat titleFormat3 = new WritableCellFormat(font1);
+			titleFormat3.setBackground(c);
+			titleFormat3.setAlignment(Alignment.CENTRE);
+			titleFormat3.setVerticalAlignment(VerticalAlignment.CENTRE);
+			titleFormat3.setBorder(Border.ALL, BorderLineStyle.THIN);
+			titleFormat3.setBorder(Border.ALL, BorderLineStyle.THIN);
+			return titleFormat3;
+		} catch (WriteException e) {
+			return null;
+		}
+	}
+}

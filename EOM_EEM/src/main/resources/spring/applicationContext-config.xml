@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans-4.1.xsd">
+
+
+    <bean id="eemConstants" class="com.metarnet.eomeem.utils.EemConstants" lazy-init="false">
+        <property name="relativePath" value="${relativePath}" />
+        <property name="gatherDataPath" value="${gatherDataPath}" />
+        <property name="evaluationFileAbsolutePath" value="${evaluationFileAbsolutePath}" />
+        <property name="orderDataPath" value="${orderDataPath}" />
+        <property name="reportTimeLock" value="${reportTimeLock}" />
+        <property name="autoReportLock" value="${autoReportLock}" />
+        <property name="attachTempPath" value="${attachTempPath}" />
+
+    </bean>
+
+    <bean id='jobConfiguration' class="com.metarnet.eomeem.utils.JobConfiguration" init-method="configure">
+        <property name="resource"><value>job-config.xml</value></property>
+    </bean>
+</beans>

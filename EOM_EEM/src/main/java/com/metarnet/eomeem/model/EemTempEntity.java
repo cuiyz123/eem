@@ -1,0 +1,216 @@
+package com.metarnet.eomeem.model;
+
+import com.metarnet.core.common.model.BaseForm;
+
+import javax.persistence.*;
+import java.sql.Timestamp;
+import java.util.Date;
+
+/**
+ * Created by Administrator on 2016/6/22.
+ * attribute1  存储专业的ids
+ * attribute2  存储专业的名字
+ * attribute3  专业code
+ */
+@Entity
+@Table(name = "t_eom_temp_info")
+public class EemTempEntity extends BaseEntity {
+    private String tempName;//模板名
+    private String shortName;//简称
+    private Integer tempType;//模板类型 1:代表 填报模板  2：代表汇总模板   3. 扣分模板
+    private String relativePath;//附件保存的相对路径
+    private String suffix;//后缀
+    private String primitiveName;//原始名
+    private Integer reportedFrequency;//上报频率 0：代表空 1：代表季度  2：代表半年
+    private Integer tempPattern;//模板格式  0：代表空 1：代表模板中sheet数量固定 2:代表模板中sheet数量不定
+    private Integer level;//1表示普通模板  2表示光缆模板  3 互通商用后评价表
+    private TemplateExcelByteData templateExcelByteData;//存放二进制的对象
+    private EemTempEntity eemTempEntity;
+    private String editHtml;
+
+    public EemTempEntity() {
+    }
+
+    public EemTempEntity(Long objectId, Date creationTime, Long createdBy, String tempName, String shortName, Integer tempType, Integer reportedFrequency, Integer tempPattern, Long relID) {
+        super(objectId, createdBy, new Timestamp(creationTime.getTime()));
+        this.reportedFrequency = reportedFrequency;
+        this.tempName = tempName;
+        this.shortName = shortName;
+        this.tempType = tempType;
+        this.tempPattern = tempPattern;
+        EemTempEntity eemTempEntity1 = new EemTempEntity();
+        eemTempEntity1.setObjectId(relID);
+        this.eemTempEntity = eemTempEntity1;
+    }
+
+    public EemTempEntity(Long objectId, String tempName) {
+        super(objectId);
+        this.tempName = tempName;
+    }
+
+    public EemTempEntity(Long objectId, String tempName, Integer reportedFrequency, Integer tempType, Integer tempPattern, String attribute1) {
+        super(objectId, attribute1);
+        this.tempName = tempName;
+        this.reportedFrequency = reportedFrequency;
+        this.tempType = tempType;
+        this.tempPattern = tempPattern;
+    }
+
+    public EemTempEntity(Long objectId, String tempName, Integer reportedFrequency, Integer tempType, Integer tempPattern, String attribute1, Integer level) {
+        super(objectId, attribute1);
+        this.tempName = tempName;
+        this.reportedFrequency = reportedFrequency;
+        this.tempType = tempType;
+        this.tempPattern = tempPattern;
+        this.level = level;
+    }
+
+    public EemTempEntity(Long objectId, String tempName, String shortName, Integer reportedFrequency, Integer tempType, Integer tempPattern, String attribute1, Integer level,Long applyId) {
+        super(objectId, attribute1);
+        this.tempName = tempName;
+        this.reportedFrequency = reportedFrequency;
+        this.tempType = tempType;
+        this.shortName=shortName;
+        this.tempPattern = tempPattern;
+        this.level = level;
+        this.setApplyId(applyId);
+    }
+
+    public EemTempEntity(String tempName, String shortName) {
+        this.tempName = tempName;
+        this.shortName = shortName;
+    }
+
+    public EemTempEntity(Long objectId, String tempName, String shortName) {
+        super(objectId);
+        this.tempName = tempName;
+        this.shortName = shortName;
+    }
+
+    public EemTempEntity(String relativePath) {
+        this.relativePath = relativePath;
+    }
+
+    public EemTempEntity(Long objectId, String tempName, String shortName, String relativePath, Integer tempType, String suffix, String primitiveName, Integer tempPattern, Integer reportedFrequency, Integer level) {
+        super(objectId);
+        this.tempName = tempName;
+        this.shortName = shortName;
+        this.relativePath = relativePath;
+        this.tempType = tempType;
+        this.suffix = suffix;
+        this.primitiveName = primitiveName;
+        this.tempPattern = tempPattern;
+        this.reportedFrequency = reportedFrequency;
+        this.level = level;
+    }
+
+    @Column(name = "TEMP_NAME")
+    public String getTempName() {
+        return tempName;
+    }
+
+    public void setTempName(String tempName) {
+        this.tempName = tempName;
+    }
+
+    @Column(name = "SHORT_NAME")
+    public String getShortName() {
+        return shortName;
+    }
+
+    public void setShortName(String shortName) {
+        this.shortName = shortName;
+    }
+
+    @Column(name = "TEMP_TYPE")
+    public Integer getTempType() {
+        return tempType;
+    }
+
+    public void setTempType(Integer tempType) {
+        this.tempType = tempType;
+    }
+
+    @Column(name = "RELATIVE_PATH")
+    public String getRelativePath() {
+        return relativePath;
+    }
+
+    public void setRelativePath(String relativePath) {
+        this.relativePath = relativePath;
+    }
+
+    @Column(name = "SUFFIX")
+    public String getSuffix() {
+        return suffix;
+    }
+
+    public void setSuffix(String suffix) {
+        this.suffix = suffix;
+    }
+
+    @Column(name = "LEVEL", nullable = false, columnDefinition = "INT default 1")
+    public Integer getLevel() {
+        return level;
+    }
+
+    public void setLevel(Integer level) {
+        this.level = level;
+    }
+
+    @Column(name = "PRIMITIVE_NAME")
+    public String getPrimitiveName() {
+        return primitiveName;
+    }
+
+    public void setPrimitiveName(String primitiveName) {
+        this.primitiveName = primitiveName;
+    }
+
+    @Column(name = "REPORTED_FREQUENCY")
+    public Integer getReportedFrequency() {
+        return reportedFrequency;
+    }
+
+    public void setReportedFrequency(Integer reportedFrequency) {
+        this.reportedFrequency = reportedFrequency;
+    }
+
+    @Column(name = "TEMP_PATTERN")
+    public Integer getTempPattern() {
+        return tempPattern;
+    }
+
+    public void setTempPattern(Integer tempPattern) {
+        this.tempPattern = tempPattern;
+    }
+
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "TEMP_DATA_ID")
+    public TemplateExcelByteData getTemplateExcelByteData() {
+        return templateExcelByteData;
+    }
+
+    public void setTemplateExcelByteData(TemplateExcelByteData templateExcelByteData) {
+        this.templateExcelByteData = templateExcelByteData;
+    }
+
+    @OneToOne
+    @JoinColumn(name = "REL_TEMP_ID")
+    public EemTempEntity getEemTempEntity() {
+        return eemTempEntity;
+    }
+
+    public void setEemTempEntity(EemTempEntity eemTempEntity) {
+        this.eemTempEntity = eemTempEntity;
+    }
+
+    @Transient
+    public String getEditHtml() {
+        return editHtml;
+    }
+
+    public void setEditHtml(String editHtml) {
+        this.editHtml = editHtml;
+    }
+}

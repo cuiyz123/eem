@@ -1,0 +1,210 @@
+package com.metarnet.eomeem.service.impl;
+
+import com.metarnet.core.common.dao.IBaseDAO;
+import com.metarnet.core.common.exception.DAOException;
+import com.metarnet.core.common.exception.ServiceException;
+import com.metarnet.core.common.model.Pager;
+import com.metarnet.core.common.utils.BeanUtils;
+import com.metarnet.eomeem.model.EemTempEntity;
+import com.metarnet.eomeem.model.TemplateExcelByteData;
+import com.metarnet.eomeem.service.IEemTemplateService;
+import com.metarnet.eomeem.utils.EemConstants;
+import com.metarnet.eomeem.utils.ExcelConverter2;
+import com.ucloud.paas.proxy.aaaa.entity.UserEntity;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
+
+import javax.annotation.Resource;
+import java.io.File;
+import java.io.IOException;
+import java.sql.Timestamp;
+import java.util.*;
+
+/**
+ * Created by Administrator on 2016/6/2.
+ */
+@Service
+public class EemTemplateServiceImpl implements IEemTemplateService {
+    @Resource
+    private IBaseDAO baseDAO;
+
+    @Override
+    public Pager queryTemplateList(Pager pager, UserEntity userEntity) throws ServiceException {
+        StringBuffer hql = new StringBuffer("select new EemTempEntity(objectId,creationTime,createdBy,tempName,shortName,tempType,reportedFrequency,tempPattern,eemTempEntity.objectId) from EemTempEntity where deletedFlag=0 ");
+        if(userEntity.getCategory().equals("PRO")){
+            hql.append(" and tempType!=3");
+        }
+        if(userEntity.getCategory().equals("CITY")){
+            hql.append(" and tempType=1");
+        }
+
+        if(!"root".equals(userEntity.getUserName())&&!userEntity.getCategory().equals("UNI")){
+            hql.append(" and tempType=1 ");
+        }
+        Map<String, Object> queryMap = new HashMap<String, Object>();
+        try {
+            Map<String, Object> params = pager.getParameters();
+            if (params.size() > 0) {
+                if (params.get("tempName") != null && StringUtils.isNotBlank(params.get("tempName").toString())) {
+                    hql.append(" and tempName like '%" + params.get("tempName") + "%'");
+                }
+                if (params.get("tempType") != null && StringUtils.isNotBlank(params.get("tempType").toString())) {
+                    hql.append(" and tempType = " + Integer.parseInt(params.get("tempType").toString()));
+                }
+                if (params.get("tempCreateTime") != null && StringUtils.isNotBlank(params.get("tempCreateTime").toString())) {
+                    hql.append(" and (creationTime between '" + params.get("tempCreateTime") + " 00:00:00'");
+                    hql.append(" and '" + params.get("tempCreateTime") + " 23:59:59')");
+                }
+            }
+            pager = baseDAO.getPageByHql(hql.toString(), pager, queryMap);
+            for (EemTempEntity eemTempEntity : (List<EemTempEntity>) pager.getExhibitDatas()) {
+                StringBuffer editHtml = new StringBuffer("<a href=javascript:; onclick='downloadTemp(" + eemTempEntity.getObjectId() + ")'>模板下载</a>");
+                if ("root".equals(userEntity.getUserName())) {
+                    editHtml.append("&nbsp;&nbsp;<a href=javascript:; onclick=\"updateTemp(" + eemTempEntity.getObjectId() + ",'" + eemTempEntity.getTempName() + "','"+eemTempEntity.getShortName()+"'," + eemTempEntity.getTempType() + "," + eemTempEntity.getReportedFrequency() + "," + eemTempEntity.getTempPattern() + "," + eemTempEntity.getEemTempEntity().getObjectId() + ")\">修改</a>");
+                    editHtml.append("&nbsp;&nbsp;<a href=javascript:; onclick=\"deleteTemp(" + eemTempEntity.getObjectId() + ",'" + eemTempEntity.getTempName() + "')\">删除</a>");
+                    if(eemTempEntity.getTempType()==1){
+                        editHtml.append("&nbsp;&nbsp;<a href=javascript:; onclick=\"setRel(" + eemTempEntity.getObjectId() + ",'" + eemTempEntity.getTempName() + "',"+eemTempEntity.getEemTempEntity().getObjectId()+")\">关联汇总模板</a>");
+                    }
+                }
+                eemTempEntity.setEditHtml(editHtml.toString());
+            }
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        pager.setIsSuccess(true);
+        int pageSize = pager.getPageSize();
+        int recordCount = pager.getRecordCount();
+        int pageCount = pager.getPageCount();
+        pageCount = recordCount / pageSize + (recordCount % pageSize > 0 ? 1 : 0);
+        pager.setPageCount(pageCount);
+        return pager;
+    }
+
+    @Override
+    public String saveUploadFiles(EemTempEntity eemTempEntity, MultipartHttpServletRequest multipartRequest, UserEntity userEntity, Long relID) throws ServiceException {
+        String result = "";
+        try {
+            List<EemTempEntity> list = baseDAO.find("select new EemTempEntity(objectId,tempName) from EemTempEntity where deletedFlag=0 and tempName='" + eemTempEntity.getTempName() + "'");
+            if (list != null && list.size() > 0) {
+                if(!eemTempEntity.getObjectId().equals(list.get(0).getObjectId())){
+                    result += "此模板名称已存在";
+                }
+            }
+            if (StringUtils.isBlank(result)) {
+                for (Iterator<String> iterator = multipartRequest.getFileNames(); iterator.hasNext(); ) {
+                    String key = iterator.next();
+                    MultipartFile file = multipartRequest.getFile(key);
+                    if (file.getSize() > 0) {
+                        if (file.getName().equals("pageTemplate")) {
+                            ExcelConverter2 ec = new ExcelConverter2();
+                            byte[] xmlByte = ec.fromExcelFileByteArrayToXml(file.getInputStream()).getBytes();
+                            byte[] uploadByte = file.getBytes();
+                            TemplateExcelByteData excelByteData = new TemplateExcelByteData();
+                            excelByteData.setObjectId(baseDAO.getSequenceNextValue(TemplateExcelByteData.class));
+                            excelByteData.setXmlFileData(xmlByte);
+                            excelByteData.setUploadFileData(uploadByte);
+                            eemTempEntity.setTemplateExcelByteData(excelByteData);
+                        } else if (file.getName().equals("dataTemplate")) {
+                            eemTempEntity.setPrimitiveName(file.getOriginalFilename());
+                            String prefix = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf(".") + 1);
+                            eemTempEntity.setSuffix(prefix);
+
+                            if(eemTempEntity.getTempName().contains("汇总")){
+                                eemTempEntity.setRelativePath("collect/"+eemTempEntity.getTempName() + "." + prefix);
+                            }else if(eemTempEntity.getTempName().contains("集团扣减")){
+                                eemTempEntity.setRelativePath("deduction/"+eemTempEntity.getTempName() + "." + prefix);
+                            }else{
+                                eemTempEntity.setRelativePath("report/"+eemTempEntity.getTempName() + "." + prefix);
+                            }
+                            file.transferTo(new File(EemConstants.RELATIVE_PATH + eemTempEntity.getTempName() + "." + prefix));
+                        }
+                    }
+                }
+                /*if (eemTempEntity.getTempType() == 2) {
+                    EemTempEntity eemTemp = new EemTempEntity();
+                    eemTemp.setObjectId(relID);
+                    eemTempEntity.setEemTempEntity(eemTemp);
+                }*/
+                if (eemTempEntity.getObjectId() == null) {
+                    eemTempEntity.setObjectId(baseDAO.getSequenceNextValue(EemTempEntity.class));
+                }
+                baseDAO.saveOrUpdate(eemTempEntity, userEntity);
+            }
+        } catch (DAOException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    @Override
+    public EemTempEntity findTempByID(Long id) throws ServiceException {
+        try {
+            return (EemTempEntity) baseDAO.get(EemTempEntity.class, id);
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @Override
+    public void deleteTemp(Long objectID, UserEntity userEntity) throws ServiceException {
+        try {
+            EemTempEntity eemTempEntity = (EemTempEntity) baseDAO.get(EemTempEntity.class, objectID);
+            eemTempEntity.setDeletedFlag(true);
+            eemTempEntity.setDeletedBy(userEntity.getUserId());
+            eemTempEntity.setDeletionTime(new Timestamp(System.currentTimeMillis()));
+            baseDAO.saveOrUpdate(eemTempEntity);
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void updateRel(Long tempID, Long relTempID, UserEntity userEntity) throws ServiceException {
+        try {
+            EemTempEntity eemTempEntity = (EemTempEntity)baseDAO.get(EemTempEntity.class, tempID);
+            EemTempEntity relTempEntity = (EemTempEntity)baseDAO.get(EemTempEntity.class, relTempID);
+            eemTempEntity.setEemTempEntity(relTempEntity);
+            eemTempEntity.setLastUpdatedBy(userEntity.getUserId());
+            eemTempEntity.setLastUpdateTime(new Timestamp(System.currentTimeMillis()));
+            baseDAO.saveOrUpdate(eemTempEntity);
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public List<EemTempEntity> findAllTempEntity(String type) throws ServiceException {
+        List<EemTempEntity> eemTempEntityList = new ArrayList<EemTempEntity>();
+        try {
+            if("report".equals(type)){
+                eemTempEntityList = baseDAO.find("select new EemTempEntity(objectId,tempName,shortName,relativePath,tempType,suffix,primitiveName,tempPattern,reportedFrequency,level) from EemTempEntity where deletedFlag=0 and tempType=1");
+            }else if("sum".equals(type)){
+                eemTempEntityList = baseDAO.find("select new EemTempEntity(objectId,tempName,shortName,relativePath,tempType,suffix,primitiveName,tempPattern,reportedFrequency,level) from EemTempEntity where deletedFlag=0 and tempType=2");
+            }else if("deduct".equals(type)){
+                eemTempEntityList = baseDAO.find("select new EemTempEntity(objectId,tempName,shortName,relativePath,tempType,suffix,primitiveName,tempPattern,reportedFrequency,level) from EemTempEntity where deletedFlag=0 and tempType=3");
+            }else{
+                eemTempEntityList = baseDAO.find("select new EemTempEntity(objectId,tempName,shortName,relativePath,tempType,suffix,primitiveName,tempPattern,reportedFrequency,level) from EemTempEntity where deletedFlag=0");
+            }
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        return eemTempEntityList;
+    }
+
+    @Override
+    public List<EemTempEntity> findEportTempByCollectID(Long formId) {
+        try {
+            List<EemTempEntity> eemTempEntityList = baseDAO.find("select new EemTempEntity(objectId,tempName,shortName,relativePath,tempType,suffix,primitiveName,tempPattern,reportedFrequency,level) from EemTempEntity where deletedFlag=0 and eemTempEntity.objectId="+formId);
+            return eemTempEntityList;
+        } catch (DAOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+}
